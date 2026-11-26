@@ -1,0 +1,45 @@
+# Databases
+*.mdb
+*.sqlite
+*.sqlite-journal
+
+# FMD Server config
+config.json
+config.yaml
+config.yml
+
+# binaries
+fmdserver
+findmydeviceserver
+fmd-server
+fmd-server-ctl
+fmdDBViewer
+cmd/fmd.db
+cmd/config.yml2
+cmd/__debug_bin4154895520
+cmd/__debug_bin378745479
+
+# Certs
+*.crt
+*.csr
+*.key
+*.pem
+cmd/test/web
+
+# Release builds
+*.zip
+*.zip.sha256sum
+*.snap
+
+# Varia
+*.patch
+
+# Node / Frontend
+node_modules/
+dist/
+.env.local
+*.tsbuildinfo
+*.pnpm-store
+
+db/fmd.sqlite-wal
+db/fmd.sqlite-shm
