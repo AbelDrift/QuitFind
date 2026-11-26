@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open Find</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<style>
+  :root { --bg:#f0f4f9; --card:#e9eef6; --ink:#1f1f1f; --muted:#5f6368; --accent:#1a73e8; --lost:#d93025; --ok:#1e8e3e; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.4 system-ui, "Segoe UI", Roboto, sans-serif; color:var(--ink); background:var(--bg); height:100vh; display:flex; flex-direction:column; }
+  header { display:flex; align-items:center; gap:10px; padding:12px 20px; }
+  header .logo { width:30px; height:30px; border-radius:50%; background:var(--accent); color:#fff; display:grid; place-items:center; font-size:18px; }
+  header h1 { font-size:22px; font-weight:500; margin:0; }
+  header .bt { margin-left:auto; color:var(--muted); font-size:13px; }
+  main { flex:1; display:flex; min-height:0; }
+  nav { width:84px; display:flex; flex-direction:column; align-items:center; gap:14px; padding-top:20px; }
+  nav button { border:0; background:none; cursor:pointer; color:var(--ink); font-size:12px; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  nav button span { width:56px; height:32px; border-radius:16px; display:grid; place-items:center; font-size:18px; }
+  nav button.on span { background:#d3e3fd; }
+  nav button.on { color:var(--accent); font-weight:600; }
+  #panel { width:400px; background:#fff; border-radius:24px 0 0 0; padding:20px 16px; overflow:auto; }
+  #panel h2 { font-size:16px; font-weight:500; margin:4px 4px 14px; }
+  .card { display:flex; align-items:center; gap:16px; background:var(--card); border-radius:22px; padding:10px; margin-bottom:10px; cursor:pointer; border:2px solid transparent; }
+  .card:hover { background:#dde3ea; }
+  .card.sel { border-color:var(--accent); }
+  .tile { width:80px; height:80px; flex:none; background:#fff; border-radius:16px; display:grid; place-items:center; font-size:38px; }
+  .card .name { font-size:20px; }
+  .card .sub, .muted { color:var(--muted); font-size:13px; }
+  .live { color:var(--ok) !important; }
+  .badge { background:var(--lost); color:#fff; font-size:11px; font-weight:700; border-radius:6px; padding:1px 6px; margin-left:6px; vertical-align:middle; }
+  .btn { border:0; border-radius:20px; padding:9px 16px; font-size:14px; cursor:pointer; background:#d3e3fd; color:#041e49; margin:4px 6px 4px 0; }
+  .btn.red { background:var(--lost); color:#fff; } .btn.green { background:var(--ok); color:#fff; } .btn.plain { background:#eef1f5; }
+  .btn:disabled { opacity:.45; cursor:default; }
+  .meter { height:12px; border-radius:6px; background:#e3e7ed; overflow:hidden; margin:6px 0; } .meter div { height:100%; background:var(--accent); }
+  .box { background:var(--card); border-radius:18px; padding:14px; margin:12px 0; }
+  code { background:#eef1f5; padding:2px 6px; border-radius:6px; word-break:break-all; font-size:12px; }
+  #mapwrap { flex:1; padding:16px 16px 16px 0; background:#fff; } #map { height:100%; border-radius:24px; }
+  .pin { width:34px; height:34px; border-radius:50%; border:3px solid #fff; display:grid; place-items:center; font-size:17px; box-shadow:0 2px 6px #0005; }
+  .pinlabel { background:#fff; border-radius:8px; padding:1px 6px; font-size:12px; white-space:nowrap; box-shadow:0 1px 3px #0003; }
+  #toast { position:fixed; top:16px; left:50%; transform:translateX(-50%); background:#202124; color:#fff; padding:8px 18px; border-radius:18px; display:none; z-index:2000; }
+  #login { position:fixed; inset:0; background:var(--bg); display:none; place-items:center; z-index:3000; }
+  #login form { background:#fff; padding:28px; border-radius:24px; width:340px; }
+  #login input { width:100%; padding:10px; border-radius:10px; border:1px solid #ccc; font-size:15px; margin:10px 0; }
+  @media (max-width: 800px) {
+    main { flex-direction:column-reverse; } nav { flex-direction:row; width:auto; justify-content:center; padding:6px; }
+    #panel { width:auto; flex:1; border-radius:0; } #mapwrap { flex:none; height:45vh; padding:0 8px; } header .bt { display:none; }
+  }
+</style>
+</head>
+<body>
+<header><div class="logo">⌖</div><h1>Open Find</h1><div class="bt" id="bt"></div></header>
+<main>
+  <nav>
+    <button data-tab="mine" class="on"><span>📱</span>Devices</button>
+    <button data-tab="nearby"><span>📶</span>Nearby</button>
+    <button data-tab="connect"><span>➕</span>Connect</button>
+  </nav>
+  <section id="panel"></section>
+  <div id="mapwrap"><div id="map"></div></div>
+</main>
+<div id="toast"></div>
+<div id="login"><form id="loginform"><h2>Open Find</h2><div class="muted">Enter the private key shown in the desktop app or in the server's start-up message.</div><input id="keyin" placeholder="Private key" autocomplete="current-password"><button class="btn">Open</button></form></div>
+<script>
+const ICON = {Tag:"🏷️",Beacon:"📡",Phone:"📱",Tablet:"📖",Laptop:"💻",Computer:"🖥️",Watch:"⌚",Headphones:"🎧",Other:"🔵"};
+const COLOR = {Tag:"#f29900",Beacon:"#a142f4",Phone:"#1a73e8",Tablet:"#1a73e8",Laptop:"#188038",Computer:"#188038",Watch:"#00897b",Headphones:"#00897b",Other:"#5f6368"};
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let key = new URLSearchParams(location.hash.slice(1)).get("key") || localStorage.getItem("openfind-key") || "";
+if (location.hash) { localStorage.setItem("openfind-key", key); history.replaceState(null, "", location.pathname); }
+let state = {devices:[], nearby:[]}, tab = "mine", sel = null, placing = false, fitted = false, lastToast = null;
+
+const map = L.map("map", {zoomControl:true}).setView([52.13, 5.29], 7);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+const layer = L.layerGroup().addTo(map);
+map.on("click", e => { if (placing) { placing = false; cmd({do:"place", lat:e.latlng.lat.toFixed(6), lon:e.latlng.lng.toFixed(6)}); } });
+
+async function cmd(params) {
+  const q = new URLSearchParams({...params, key});
+  await fetch("api/cmd?" + q, {method:"POST"});
+  refresh();
+}
+function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.style.display = "block"; clearTimeout(el.t); el.t = setTimeout(() => el.style.display = "none", 4000); }
+
+async function refresh() {
+  try {
+    const r = await fetch("api/state?key=" + encodeURIComponent(key), {cache:"no-store"});
+    if (r.status === 401) { document.getElementById("login").style.display = "grid"; return; }
+    state = await r.json();
+  } catch (e) { document.getElementById("bt").textContent = "Can't reach Open Find"; return; }
+  document.getElementById("login").style.display = "none";
+  if (state.message && state.message !== lastToast) toast(state.message);
+  lastToast = state.message;
+  document.getElementById("bt").textContent = (state.bt || "") + " · " + state.devices.length + " devices";
+  draw(); drawMap();
+}
+
+function card(d) {
+  const st = d.lost ? '<span class="badge">LOST</span>' : "";
+  return `<div class="card ${sel === d.id ? "sel" : ""}" data-id="${esc(d.id)}"><div class="tile" style="color:${COLOR[d.kind]}">${ICON[d.kind] || "🔵"}</div>
+    <div><div class="name">${esc(d.name)}${st}</div><div class="sub ${d.live ? "live" : ""}">${esc(d.status)}</div>${d.battery != null ? `<div class="sub">🔋 ${d.battery}%</div>` : ""}</div></div>`;
+}
+
+function draw() {
+  const p = document.getElementById("panel");
+  const d = state.devices.find(x => x.id === sel);
+  if (tab === "mine" && d) {
+    const near = state.nearby.find(n => "bt:" + n.address === d.id);
+    const strength = near ? Math.max(2, Math.min(100, (near.rssi + 100) / 60 * 100)) : 0;
+    p.innerHTML = `<button class="btn plain" id="back">← All devices</button>
+      <div style="display:flex;gap:16px;align-items:center;margin:14px 0"><div class="tile" style="background:var(--card)">${ICON[d.kind]}</div>
+      <div><div style="font-size:24px">${esc(d.name)}${d.lost ? '<span class="badge">LOST</span>' : ""}</div><div class="sub ${d.live ? "live" : "muted"}">${esc(d.status)}</div>
+      <div class="muted">${esc(d.label)}${d.what ? " · " + esc(d.what) : ""}</div>${d.battery != null ? `<div>🔋 ${d.battery}%</div>` : ""}</div></div>
+      ${d.id.startsWith("bt:") ? `<button class="btn" id="ring" ${d.near ? "" : "disabled title='Must be near the computer or server'"}>🔔 Play sound</button>` : ""}
+      ${d.last ? `<button class="btn" id="center">🎯 Show on map</button><a class="btn" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="https://www.openstreetmap.org/directions?to=${d.last.lat}%2C${d.last.lon}">🗺️ Directions</a>` : ""}
+      <div><button class="btn ${d.lost ? "green" : "red"}" id="lost">${d.lost ? "✔ I found it" : "⚠ Mark as lost"}</button></div>
+      ${d.lost ? '<div class="muted" style="color:var(--lost)">You get a notification on the computer as soon as it is seen again.</div>' : ""}
+      ${near ? `<div class="box"><b>Find nearby</b><div class="meter"><div style="width:${strength}%"></div></div><div class="muted">About ${near.dist.toFixed(1)} m · walk around and watch the bar</div></div>` : ""}
+      ${d.last ? `<div class="box"><b>Last known location</b><div>${d.last.lat.toFixed(5)}, ${d.last.lon.toFixed(5)} (±${Math.round(d.last.acc)} m)</div><div class="muted">${esc(d.last.via)} · ${esc(d.ago)}</div>
+        ${d.history.length > 1 ? `<div class="muted">${d.history.length} places in the history (blue line on the map)</div>` : ""}</div>` : ""}
+      <button class="btn plain" id="remove">🗑️ Remove device</button>`;
+    p.querySelector("#back").onclick = () => { sel = null; draw(); drawMap(); };
+    p.querySelector("#lost").onclick = () => cmd({do:"lost", id:d.id, on:d.lost ? "0" : "1"});
+    p.querySelector("#remove").onclick = () => { if (confirm("Remove " + d.name + " and its history?")) { sel = null; cmd({do:"remove", id:d.id}); } };
+    p.querySelector("#ring")?.addEventListener("click", () => cmd({do:"ring", id:d.id}));
+    p.querySelector("#center")?.addEventListener("click", () => map.setView([d.last.lat, d.last.lon], 17));
+    return;
+  }
+  if (tab === "mine") {
+    p.innerHTML = "<h2>My Devices</h2>" + (state.devices.map(card).join("") ||
+      '<div class="box"><b>No devices yet</b><p class="muted">Add Bluetooth tags, beacons and nearby devices under Nearby, or connect a phone or laptop under Connect.</p></div>');
+  } else if (tab === "nearby") {
+    p.innerHTML = `<h2>Nearby Bluetooth devices</h2><div class="muted" style="margin:0 4px 10px">${esc(state.bt)}. Tags that hide themselves change their Bluetooth address every few minutes; add them while they're close and not yet set up with a phone.</div>
+      <div class="box"><b>📍 Where is this computer?</b><div class="muted">Bluetooth finds are placed here. ${state.computer ? "Now: " + state.computer[0].toFixed(5) + ", " + state.computer[1].toFixed(5) : "Not set yet."}</div><button class="btn" id="place">${placing ? "Click on the map…" : "Set on map"}</button></div>` +
+      state.nearby.map(n => `<div class="card" style="cursor:default"><div class="tile" style="width:56px;height:56px;font-size:26px">${ICON[n.kind]}</div><div style="flex:1;min-width:0">
+        <div style="font-size:16px">${esc(n.name || n.what)}</div><div class="sub">${esc(n.what)}</div><div class="sub">~${n.dist.toFixed(1)} m · ${esc(n.address)}</div></div>
+        ${n.added ? '<span class="muted">✔ Added</span>' : `<button class="btn" data-add="${esc(n.address)}">+ Add</button>`}</div>`).join("");
+    p.querySelector("#place").onclick = () => { placing = true; toast("Click on the map where the computer is"); draw(); };
+    p.querySelectorAll("[data-add]").forEach(b => b.onclick = () => cmd({do:"add", id:b.dataset.add}));
+  } else {
+    const base = location.origin + location.pathname.replace(/[^/]*$/, "");
+    const url = base + "report?key=" + encodeURIComponent(key);
+    p.innerHTML = `<h2>Connect a phone, tablet or laptop</h2>
+      <div class="box"><b>Your private report address</b><div><code>${esc(url)}</code></div></div>
+      <div class="box"><b>📱 Android or iPhone</b><p>Install the free <b>OwnTracks</b> app, choose Mode: HTTP and paste the address above as the URL. Give the phone a Device ID; it appears here by itself.</p>
+        <div class="muted">GPSLogger (Android), custom URL:</div><code>${esc(url)}&amp;id=myphone&amp;lat=%LAT&amp;lon=%LON&amp;acc=%ACC&amp;batt=%BATT</code></div>
+      <div class="box"><b>💻 Laptop or other computer</b><p>Send a location with one command:</p><code>curl "${esc(url)}&amp;id=laptop&amp;name=My%20laptop&amp;kind=laptop&amp;lat=52.37&amp;lon=4.89"</code></div>
+      <div class="box"><b>🏷️ Bluetooth tags, beacons, AirTags, earbuds</b><p>These are found by the Bluetooth of the computer or server that runs Open Find. Open Nearby to add them.</p></div>`;
+  }
+  p.querySelectorAll(".card[data-id]").forEach(c => c.onclick = () => {
+    sel = c.dataset.id; const d = state.devices.find(x => x.id === sel);
+    if (d && d.last) map.setView([d.last.lat, d.last.lon], Math.max(map.getZoom(), 16));
+    draw(); drawMap();
+  });
+}
+
+function drawMap() {
+  layer.clearLayers();
+  const pts = [];
+  if (state.computer) {
+    L.circleMarker(state.computer, {radius:8, color:"#fff", weight:3, fillColor:"#1a73e8", fillOpacity:1}).bindTooltip("This computer").addTo(layer);
+  }
+  for (const d of state.devices) {
+    if (!d.last) continue;
+    const ll = [d.last.lat, d.last.lon], col = d.lost ? "#d93025" : COLOR[d.kind];
+    pts.push(ll);
+    if (d.last.acc > 15) L.circle(ll, {radius:d.last.acc, color:col, weight:1, fillOpacity:.1}).addTo(layer);
+    if (d.id === sel && d.history.length > 1) L.polyline(d.history, {color:"#1a73e8", weight:4, opacity:.6}).addTo(layer);
+    const big = d.id === sel ? "transform:scale(1.25);" : "";
+    const icon = L.divIcon({className:"", iconSize:[34,34], iconAnchor:[17,17],
+      html:`<div class="pin" style="background:${col};${big}">${ICON[d.kind]}</div>`});
+    L.marker(ll, {icon}).bindTooltip(esc(d.name), {permanent:true, direction:"bottom", offset:[0,16], className:"pinlabel"})
+      .on("click", () => { sel = d.id; tab = "mine"; setTab(); draw(); drawMap(); }).addTo(layer);
+  }
+  if (!fitted && pts.length) { fitted = true; map.fitBounds(pts, {padding:[60,60], maxZoom:16}); }
+}
+
+function setTab() { document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab)); }
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => { tab = b.dataset.tab; if (tab !== "mine") sel = null; setTab(); draw(); });
+document.getElementById("loginform").onsubmit = e => { e.preventDefault(); key = document.getElementById("keyin").value.trim(); localStorage.setItem("openfind-key", key); refresh(); };
+refresh(); setInterval(refresh, 2000);
+</script>
+</body>
+</html>
