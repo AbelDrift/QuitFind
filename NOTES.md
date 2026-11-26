@@ -32,3 +32,4 @@
   (updates later: `git subtree pull --prefix server https://gitlab.com/fmd-foss/fmd-server.git <tag> --squash`).
   Go staat niet op de pc → bouwen met Docker: image quitfind-server:dev.
 - 2026-11-26 22:04: FASE 1 OK: image quitfind-server:dev (349 MB) gebouwd; testserver via test-instance/docker-compose.yml (container quitfind-test, 127.0.0.1:8096→8080, read_only, cap_drop ALL, 512 MB, eigen lege db). Web 200, /api/v1/version = 0.17.1. Starten: cd test-instance && docker compose up -d.
+- 2026-11-26 22:05: workflow quitfind-begrijpen (run wf_bb5605f6-552): 8 lezers (server-api, web, crypto, android, tags, bridge, desktop, suite) → architect-bouwplan. Hervatten: Workflow scriptPath ~/.claude/projects/-home-abel-claude-algemeen/63eeee7a-6517-415a-ba3c-8a163a78d5ff/workflows/scripts/quitfind-begrijpen-wf_bb5605f6-552.js + resumeFromRunId wf_bb5605f6-552. Goal van Abel: doorwerken tot de app klaar lijkt of het tegoed op is.
