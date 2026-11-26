@@ -22,3 +22,13 @@
 ## Logboek
 - 2026-11-26: map ~/claude/QuitFind aangemaakt (CLAUDE.md, README, LICENSE, NOTES). Wacht op
   lege repo's AbelDrift/QuitFind op GitHub en Codeberg (Abel maakt ze aan, geen gh-cli hier).
+- 2026-11-26: repo's bestaan; opzet gepusht (e7322dd). Abel: Google-brug als OPTIE in instellingen,
+  beide manieren: A = op de server via een open project dat met eigen account tag-locaties bij
+  Google ophaalt (eerst code+licentie nalezen; reserve-Google-account i.v.m. blokkaderisico);
+  B = reservetelefoon met Find Hub + hulp-app die locatie doorstuurt (breekbaar). Standaard uit.
+  Fase 3b in het plan. Abel heeft e/OS (Murena) op de Fairphone met microG → uitzoeken of microG
+  de Find Hub-netwerkfunctie ondersteunt (dan kan de Fairphone ook tags van anderen/zichzelf melden).
+- Fase 1 gestart: FMD-server v0.17.1 via `git subtree add --prefix server … v0.17.1 --squash`
+  (updates later: `git subtree pull --prefix server https://gitlab.com/fmd-foss/fmd-server.git <tag> --squash`).
+  Go staat niet op de pc → bouwen met Docker: image quitfind-server:dev.
+- 2026-11-26 22:04: FASE 1 OK: image quitfind-server:dev (349 MB) gebouwd; testserver via test-instance/docker-compose.yml (container quitfind-test, 127.0.0.1:8096→8080, read_only, cap_drop ALL, 512 MB, eigen lege db). Web 200, /api/v1/version = 0.17.1. Starten: cd test-instance && docker compose up -d.
