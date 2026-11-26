@@ -1,0 +1,233 @@
+import { argon2id } from '@noble/hashes/argon2.js';
+import { CTX_PASSWORD, hash } from './cryptov2';
+
+export const CRYPTO_PROTO_V1 = 1;
+export const CRYPTO_PROTO_V2 = 2;
+
+const ARGON2_T = 1;
+const ARGON2_P = 4;
+const ARGON2_M = 131072;
+const ARGON2_HASH_LENGTH = 32;
+const ARGON2_SALT_LENGTH = 16;
+
+const CONTEXT_STRING_ASYM_KEY_WRAP = 'context:asymmetricKeyWrap';
+const CONTEXT_STRING_LOGIN = 'context:loginAuthentication';
+
+export const AES_KEY_SIZE_BYTES = 32; // 256 bit
+export const AES_IV_SIZE_BYTES = 12; // 96 bit
+export const AES_TAG_SIZE_BYTES = 16; // 128 bit
+
+const RSA_KEY_SIZE_BYTES = 3072 / 8; // 384 bytes
+
+export const base64Decode = (encodedString: string) => {
+  try {
+    const cleaned = encodedString.trim().replace(/\s/g, '');
+    return Uint8Array.from(atob(cleaned), (c) => c.charCodeAt(0));
+  } catch {
+    throw new Error('Invalid base64 string');
+  }
+};
+
+export const base64Encode = (bytesToEncode: Uint8Array) => {
+  const binString = Array.from(bytesToEncode, (byte) => String.fromCodePoint(byte)).join('');
+  return btoa(binString);
+};
+
+// Section: Password and hashing
+
+// v1 returns the Argon-encoded string
+// v2 returns the bytes of the "password key" K_pwk, that are then processed further by the cryptov2 code
+export type PasswordHashResult = string | Uint8Array<ArrayBuffer>;
+
+export async function hashPasswordForLogin(
+  protoVersion: number,
+  username: string,
+  password: string,
+  salt64: string
+): Promise<PasswordHashResult> {
+  switch (protoVersion) {
+    case CRYPTO_PROTO_V1:
+      return hashPasswordForLoginV1(password, salt64);
+    case CRYPTO_PROTO_V2:
+      return await hashPasswordForLoginV2(username, password, salt64);
+    default:
+      throw new Error(`unknown protoVersion: ${protoVersion}`);
+  }
+}
+
+async function hashPasswordForLoginV2(
+  username: string,
+  password: string,
+  salt64: string
+): Promise<Uint8Array<ArrayBuffer>> {
+  const enc = new TextEncoder();
+  const usernameHash = await hash(enc.encode(username));
+  const passwordBytes = enc.encode(password);
+  const saltBytes = base64Decode(salt64);
+
+  const argonInput = new Uint8Array([...CTX_PASSWORD, ...usernameHash, ...passwordBytes]);
+
+  const result = argon2id(argonInput, saltBytes, {
+    t: ARGON2_T,
+    p: ARGON2_P,
+    m: ARGON2_M,
+    dkLen: ARGON2_HASH_LENGTH,
+  });
+
+  return result;
+}
+
+function hashPasswordForLoginV1(password: string, salt64: string): string {
+  const saltBytes = base64Decode(salt64);
+  const contextPassword = CONTEXT_STRING_LOGIN + password;
+  const passwordBytes = new TextEncoder().encode(contextPassword);
+
+  const hash = argon2id(passwordBytes, saltBytes, {
+    t: ARGON2_T,
+    p: ARGON2_P,
+    m: ARGON2_M,
+    dkLen: ARGON2_HASH_LENGTH,
+  });
+
+  let hashBase64 = base64Encode(hash);
+  // Remove base64 padding for Argon2 format
+  while (hashBase64.endsWith('=')) {
+    hashBase64 = hashBase64.slice(0, -1);
+  }
+
+  return `$argon2id$v=19$m=${ARGON2_M},t=${ARGON2_T},p=${ARGON2_P}$${salt64}$${hashBase64}`;
+}
+
+const hashPasswordForKeyWrap = (password: string, salt: Uint8Array) => {
+  const contextPassword = CONTEXT_STRING_ASYM_KEY_WRAP + password;
+  const passwordBytes = new TextEncoder().encode(contextPassword);
+
+  return argon2id(passwordBytes, salt, {
+    t: ARGON2_T,
+    p: ARGON2_P,
+    m: ARGON2_M,
+    dkLen: ARGON2_HASH_LENGTH,
+  });
+};
+
+// Section: Asymmetric crypto
+
+export const unwrapPrivateKey = async (password: string, keyData: string) => {
+  const concatBytes = base64Decode(keyData);
+  const saltBytes = concatBytes.slice(0, ARGON2_SALT_LENGTH);
+  const ivBytes = concatBytes.slice(ARGON2_SALT_LENGTH, ARGON2_SALT_LENGTH + AES_IV_SIZE_BYTES);
+  const wrappedKeyBytes = concatBytes.slice(ARGON2_SALT_LENGTH + AES_IV_SIZE_BYTES);
+
+  const rawAesKey = hashPasswordForKeyWrap(password, saltBytes);
+
+  const unwrappingCryptoKey = await crypto.subtle.importKey(
+    'raw',
+    new Uint8Array(rawAesKey),
+    'AES-GCM',
+    false,
+    ['decrypt']
+  );
+
+  const pemBytes = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: ivBytes },
+    unwrappingCryptoKey,
+    wrappedKeyBytes
+  );
+
+  let pemString = new TextDecoder().decode(pemBytes);
+  pemString = pemString.replaceAll('-----BEGIN PRIVATE KEY-----', '');
+  pemString = pemString.replaceAll('-----END PRIVATE KEY-----', '');
+  pemString = pemString.replaceAll('\n', '');
+  const binaryDer = base64Decode(pemString);
+
+  const rsaEncKey = await crypto.subtle.importKey(
+    'pkcs8',
+    binaryDer,
+    { name: 'RSA-OAEP', hash: 'SHA-256' },
+    false, // extractability
+    ['decrypt'] // keyUsages
+  );
+
+  const rsaSigKey = await crypto.subtle.importKey(
+    'pkcs8',
+    binaryDer,
+    { name: 'RSA-PSS', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const fingerprint = await getFingerprint(binaryDer);
+
+  return { rsaEncKey, rsaSigKey, fingerprint };
+};
+
+const getFingerprint = async (binaryDer: Uint8Array<ArrayBuffer>) => {
+  // This import is only needed to be able to "export" the key, which in turn is needed to convert to SPKI format.
+  // Afterwards, we forget this key, because we don't want to have exportable keys around.
+  const privateCryptoKey = await crypto.subtle.importKey(
+    'pkcs8',
+    binaryDer,
+    { name: 'RSA-OAEP', hash: 'SHA-256' },
+    true, // extractability
+    ['decrypt'] // keyUsages
+  );
+
+  // Ideally, we could export with format "spki". But that is not supported for private keys.
+  // So we use the JWK workaround described here: https://stackoverflow.com/a/72153942/11076036
+  const jwk = await crypto.subtle.exportKey('jwk', privateCryptoKey);
+
+  const publicCryptoKey = await crypto.subtle.importKey(
+    'jwk',
+    { alg: jwk.alg, kty: jwk.kty, n: jwk.n, e: jwk.e },
+    { name: 'RSA-OAEP', hash: 'SHA-256' },
+    true, // extractability
+    ['encrypt'] // keyUsages
+  );
+
+  const spkiBuf = await crypto.subtle.exportKey('spki', publicCryptoKey);
+  const hashBuf = await crypto.subtle.digest('SHA-256', spkiBuf);
+
+  return new Uint8Array(hashBuf).toHex();
+};
+
+export const sign = async (rsaCryptoKey: CryptoKey, msg: string) => {
+  const msgBytes = new TextEncoder().encode(msg);
+  const pssParams = { name: 'RSA-PSS', saltLength: 32 };
+  const sig = await crypto.subtle.sign(pssParams, rsaCryptoKey, msgBytes);
+  const sigBytes = new Uint8Array(sig);
+  return base64Encode(sigBytes);
+};
+
+// Section: Symmetric crypto
+
+export const decryptData = async (rsaCryptoKey: CryptoKey, encryptedBase64: string) => {
+  try {
+    // Hybrid encryption format:
+    // [384 bytes: RSA-encrypted AES key][12 bytes: IV][remaining: AES-GCM encrypted data]
+    const allBytes = base64Decode(encryptedBase64);
+
+    const encryptedAesKeyBytes = allBytes.slice(0, RSA_KEY_SIZE_BYTES);
+    const ivBytes = allBytes.slice(RSA_KEY_SIZE_BYTES, RSA_KEY_SIZE_BYTES + AES_IV_SIZE_BYTES);
+    const encryptedDataBytes = allBytes.slice(RSA_KEY_SIZE_BYTES + AES_IV_SIZE_BYTES);
+
+    const aesKeyBytes = await crypto.subtle.decrypt(
+      { name: 'RSA-OAEP' },
+      rsaCryptoKey,
+      encryptedAesKeyBytes
+    );
+
+    const aesKey = await crypto.subtle.importKey('raw', aesKeyBytes, { name: 'AES-GCM' }, false, [
+      'decrypt',
+    ]);
+
+    const decryptedBytes = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: ivBytes },
+      aesKey,
+      encryptedDataBytes
+    );
+
+    return new TextDecoder().decode(decryptedBytes);
+  } catch {
+    throw new Error('Decryption failed');
+  }
+};
