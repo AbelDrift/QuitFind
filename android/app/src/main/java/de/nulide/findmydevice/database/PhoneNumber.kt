@@ -1,0 +1,47 @@
+package de.nulide.findmydevice.database
+
+import android.content.Context
+import android.os.Parcelable
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.Index
+import androidx.room.PrimaryKey
+import de.nulide.findmydevice.commands.FmdPermission
+import de.nulide.findmydevice.utils.normalizeNumberForDisplay
+import kotlinx.parcelize.Parcelize
+
+@Parcelize
+@Entity(
+    tableName = "phone_number",
+    indices = [
+        Index(value = ["number"], unique = true),
+    ],
+)
+data class PhoneNumber(
+    @PrimaryKey(autoGenerate = true) val rowId: Int = 0,
+
+    @ColumnInfo("name") val name: String,
+
+    @ColumnInfo("number") val number: String,
+
+    @ColumnInfo("permissions") val permission: Long = FmdPermission.DEFAULT,
+) : AccessItem, Parcelable {
+
+    override fun getItemPermission(): Long {
+        return permission
+    }
+
+    override fun toDisplayLabel(context: Context): String {
+        val numberDisplay = normalizeNumberForDisplay(context, number) ?: number
+        return if (name.isBlank()) numberDisplay else "$name ($numberDisplay)"
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return (other is PhoneNumber) && (number == other.number)
+    }
+
+    override fun hashCode(): Int {
+        return number.hashCode()
+    }
+
+}
