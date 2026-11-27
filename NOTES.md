@@ -167,3 +167,4 @@ WACHT OP ABEL: (1) APK op de Fairphone testen (`android/bouwen.sh --installeren`
 NOG TE DOEN (zelf): FMDN-tags lokaal herkennen met EIK (EID-berekening secp160r1; testvectoren nodig), Google-brug B (afgeraden),
 low-punten dashboard (popups sluiten bij herbouw kaartlaag, Engelse serverfouten in NL, 60 s volledige geschiedenis),
 desktop-UI visueel testen (geen Xvfb; niet op Abels scherm zonder vragen).
+- 2026-11-27 (avond): echte release-sleutel gemaakt met android/sleutel-maken.sh → ~/ontwikkeling/quitfind-sleutel (700/600; key.properties genegeerd). ABEL: reservekopie maken van die map! Emulator wordt geïnstalleerd (emulator + system-images;android-35;default;x86_64) om de Android-UI echt te testen tegen :8096 (via 10.0.2.2).
