@@ -478,4 +478,6 @@
     <string name="qf_battery">battery %1$d%%</string>
     <string name="qf_key_rejected">key rejected: link the device again on the web page</string>
     <string name="qf_error">Could not load: %1$s</string>
+    <string name="qf_scan_tags">Search for my tags with this phone</string>
+    <string name="qf_scan_hint">Every 15 minutes, 10 seconds of Bluetooth. In the background this needs location access set to \'Allow all the time\'.</string>
 </resources>

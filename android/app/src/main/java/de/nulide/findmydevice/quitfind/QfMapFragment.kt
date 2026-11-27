@@ -5,6 +5,8 @@ import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,6 +22,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -122,6 +125,7 @@ private fun DevicesView(s: QfUi.Ready, onRefresh: () -> Unit, onUnlink: () -> Un
             TextButton(onClick = onUnlink) { Text(stringResource(R.string.qf_unlink)) }
         }
         if (s.error != null) Text(stringResource(R.string.qf_error, s.error), Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.error)
+        if (s.devices.any { it.device.type == "tag" }) TagScanSwitch()
         if (s.devices.isEmpty()) Text(stringResource(R.string.qf_no_devices), Modifier.padding(16.dp))
         LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
             items(s.devices, key = { it.device.itemId }) { dv ->
@@ -131,6 +135,26 @@ private fun DevicesView(s: QfUi.Ready, onRefresh: () -> Unit, onUnlink: () -> Un
                 HorizontalDivider()
             }
         }
+    }
+}
+
+@Composable
+private fun TagScanSwitch() {
+    val ctx = LocalContext.current
+    var on by remember { mutableStateOf(QfTagScanWorker.isEnabled(ctx)) }
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
+        val ok = granted.values.all { it }
+        QfTagScanWorker.setEnabled(ctx, ok)
+        on = ok
+    }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.qf_scan_tags), Modifier.weight(1f))
+            Switch(on, { want ->
+                if (want) ask.launch(QfTagScanWorker.permissions()) else { QfTagScanWorker.setEnabled(ctx, false); on = false }
+            })
+        }
+        if (on) Text(stringResource(R.string.qf_scan_hint), style = MaterialTheme.typography.bodySmall)
     }
 }
 

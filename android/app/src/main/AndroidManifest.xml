@@ -37,8 +37,8 @@
         android:minSdkVersion="31" />
     <uses-permission
         android:name="android.permission.BLUETOOTH_SCAN"
-        android:minSdkVersion="31"
-        android:usesPermissionFlags="neverForLocation" />
+        android:minSdkVersion="31" />
+    <!-- QuitFind: scans locate the owner's own tags, so no neverForLocation -->
 
     <uses-feature
         android:name="android.hardware.camera.any"

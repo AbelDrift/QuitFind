@@ -368,4 +368,6 @@
     <string name="qf_battery">batterij %1$d%%</string>
     <string name="qf_key_rejected">sleutel geweigerd: koppel het apparaat opnieuw op de webpagina</string>
     <string name="qf_error">Laden mislukt: %1$s</string>
+    <string name="qf_scan_tags">Mijn tags zoeken met deze telefoon</string>
+    <string name="qf_scan_hint">Elke 15 minuten 10 seconden Bluetooth. Op de achtergrond werkt dit alleen met locatietoegang \'Altijd toestaan\'.</string>
 </resources>
