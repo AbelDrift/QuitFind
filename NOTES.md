@@ -55,3 +55,24 @@
   + `docker run --network none quitfind-server:builder go test ./user/ ./backend/`.
 - Node-client tests/quitfind_v2.mjs + e2e tests/e2e_register.mjs (alleen tegen :8096; ruimt op).
 - 2026-11-27 07:27: image met datatype device gebouwd, Go-tests ok (user, backend); testserver herstart; e2e_register.mjs SLAAGT (4 accounts, register, tagwaarneming via telefoon, verse client ziet alles, manipulatie geweigerd, opgeruimd). Workflow quitfind-dashboard (run wf_48eeefa5-91f): bouwer → 3 reviewers → verificatie → hersteller. Hervatten: Workflow scriptPath ~/.claude/projects/-home-abel-claude-algemeen/63eeee7a-6517-415a-ba3c-8a163a78d5ff/workflows/scripts/quitfind-dashboard-wf_48eeefa5-91f.js + resumeFromRunId wf_48eeefa5-91f.
+
+## Onderzoeksuitkomsten (workflow wf_bb5605f6-552; volledige rapporten in ~/.claude/projects/-home-abel-claude-algemeen/63eeee7a-6517-415a-ba3c-8a163a78d5ff/subagents/workflows/wf_bb5605f6-552/journal.jsonl)
+Architect-stap mislukte (gebruikslimiet; maandelijkse bestedingslimiet bereikt; onderzoek kostte ~4 mln tokens) → plan door hoofdsessie.
+- TAGS: Fresh 'n Rebel Find Hub-tags (6ATAG61 Google-only; 6ATAG72R Apple óf Google) zenden Eddystone 0xFEAA, frame 0x40/0x41,
+  20-byte EID (secp160r1, r = AES-ECB-256(EIK, klok) mod n), EID+MAC wisselen ~1024 s. Zonder EIK: alleen "een Find Hub-tag in de buurt".
+  Met EIK (eenmalig uit het Google-account, bv. via GoogleFindMyTools, GPL-3.0): lokaal herkennen, batterij lezen, laten piepen.
+  Tags in Find Hub laten (anti-stalking + crowd). microG (e/OS 4.5.1, microG 0.3.17) doet NIET mee aan het Find Hub-netwerk.
+  Vaste-ID-tags (iTag, iBeacon, Eddystone-UID) volledig zelf te volgen.
+- BRUG A: sidecar-container P6g9YHK6/GoogleFindMyToolsWebUi (GPL-3.0), vastgepind op digest, alleen 127.0.0.1:4321, reserve-account;
+  tags vanuit hoofdaccount delen met reserve-account. Eerste login eenmalig met Chrome + schermvergrendelings-PIN.
+  Risico's: tokens ingetrokken / beveiligingswaarschuwingen; tags piepen soms willekeurig bij pollen (ook FnR). Ingest-adapter
+  (OsmAnd-protocol → tag-accounts). Reserve: traccar/google-find-hub-sync (+FCM-fix) of mheers/google-find-my-tools-go.
+- BRUG B: reservetelefoon met Find Hub; meeste varianten (meldingen, schermuitlezen) afgeraden: breekbaar.
+- DESKTOP: crate findhub-desktop (Rust 2024, eframe/egui 0.37, walkers 0.66, zbus 5); BLE via BlueZ/D-Bus; eigen HTTP-server
+  op 0.0.0.0:8765 (→ naar 127.0.0.1!); ~/.config/open-find/devices.json. Plan: src/fmd.rs ~300 regels (argon2 0.5, hkdf 0.12,
+  aes-gcm 0.10.3; reqwest blocking in eigen thread).
+- SUITE (QuitChat-conventies): appId org.codeberg.abeldrift.quitfind; logo navy #17324D + oranje #FFB547 (Q met oranje staart);
+  docs/commits Nederlands, UI meertalig (en sjabloon, nl vertaling); bouwen.sh/sleutel-maken.sh, sleutel buiten repo
+  (~/ontwikkeling/quitfind-sleutel); serveradres buiten de bron (bij bouwen ingeven); geheimen-check vóór commit (nu ingebouwd).
+- PRIVACY: Tailscale-hostnaam stond in CLAUDE.md (openbaar, sinds e7322dd). Nu vervangen; echte adressen in LOKAAL.md (genegeerd).
+  Staat nog in de git-geschiedenis: herschrijven is Abels keuze (alleen bereikbaar binnen de tailnet).

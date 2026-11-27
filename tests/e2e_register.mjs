@@ -41,7 +41,7 @@ try {
 
   // 4. a fresh client: owner password → register → every device via its K_pwk → decrypt all locations
   const fresh = new Client(base);
-  const o2 = await fresh.login(owner.username, { password: 'eigenaar-wachtwoord' });
+  const o2 = await fresh.login(owner.username, { password: 'eigenaar-wachtwoord' });  // geheimen-check: ok (testwachtwoord, alleen testserver)
   const reg = await fresh.register_(o2);
   const devices = reg.filter((e) => e.kind === 'device');
   assert.equal(devices.length, 3);

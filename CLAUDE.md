@@ -11,7 +11,8 @@ Linux-desktopapp. Onderdeel van de latere **QuitSuite** (QuitChat, QuitFind, Qui
 
 ## Vaste gegevens
 - Huidige FMD-server: `~/fmd-server` (docker, image fmd-server 0.17.1, 127.0.0.1:8090)
-  → `https://debian.tail7c7f5b.ts.net:8443`. Daar draaien echte gegevens: niet breken.
+  → via Tailscale op poort 8443 (echte adressen staan in `LOKAAL.md`, niet in git). Daar draaien
+  echte gegevens: niet breken.
   Nieuwe versies eerst naast de bestaande testen (andere poort), pas dan overzetten.
 - ntfy: 127.0.0.1:8091 → `:10000`. Bezette Tailscale-poorten: 443, 8443, 10000.
 - Desktopbasis: `~/Documents/Craft Anything/google-s-find-hub-3-1-805-02/app`
@@ -20,6 +21,8 @@ Linux-desktopapp. Onderdeel van de latere **QuitSuite** (QuitChat, QuitFind, Qui
   het Codeberg-noreply-adres. Licentie GPL-3.0 (verplicht door de FMD-fork).
 
 ## Regels
+- Geen adressen, tokens of sleutels in de repo: `tools/geheimen-check.sh` draait vóór elke commit
+  (`git config core.hooksPath .githooks`). Echte adressen in `LOKAAL.md` (genegeerd door git).
 - Geen code of bestanden van Google (Find Hub) of Apple (Find My) openen of nabouwen:
   alleen eigen ontwerp en open bronnen.
 - Zwaar werk (Gradle, cargo build) één tegelijk met geheugenlimiet:
