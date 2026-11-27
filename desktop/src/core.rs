@@ -1,15 +1,74 @@
 //! The engine shared by the desktop window and the browser server:
 //! saved devices, Bluetooth sightings, location reports and web commands.
 use crate::bt::{self, BtMsg, Seen};
+use crate::fmd::{self, QfConfig, RemoteDevice};
 use crate::server::{self, Cmd, In};
 use crate::{Device, Fix, Kind, Store, ago, metres, notify, now, random_key, store_path};
 use serde_json::json;
 use std::collections::{HashMap, HashSet};
-use std::sync::mpsc::{Receiver, Sender, channel};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 pub type Wake = Arc<dyn Fn() + Send + Sync>;
+
+pub enum QfCmd {
+    Link { server: String, user: String, password: String },
+    Unlink,
+}
+
+pub enum QfMsg {
+    Linked(QfConfig),
+    LinkFailed(String),
+    Synced(Vec<RemoteDevice>),
+    Failed(String),
+}
+
+/// QuitFind sync thread: every 60 s all devices of the linked owner account (see fmd.rs).
+fn qf_spawn(mut cfg: Option<QfConfig>, rx: Receiver<QfCmd>, tx: Sender<QfMsg>, wake: Wake) {
+    std::thread::spawn(move || {
+        let mut refused = HashSet::new();
+        let mut owner_refused = false; // never hammer a refused owner key (lockout after 7 misses)
+        loop {
+            if let (Some(c), false) = (&cfg, owner_refused) {
+                let msg = match fmd::sync(&c.server, &c.user, &c.pwk64, &mut refused) {
+                    Ok(d) => QfMsg::Synced(d),
+                    Err(e) => {
+                        owner_refused = matches!(e.status, 403 | 404 | 423);
+                        QfMsg::Failed(e.text)
+                    }
+                };
+                if tx.send(msg).is_err() {
+                    break;
+                }
+                wake();
+            }
+            match rx.recv_timeout(Duration::from_secs(60)) {
+                Ok(QfCmd::Link { server, user, password }) => {
+                    let msg = match fmd::link(&server, &user, &password) {
+                        Ok(pwk64) => {
+                            let c = QfConfig { server, user, pwk64 };
+                            cfg = Some(c.clone());
+                            refused.clear();
+                            owner_refused = false;
+                            QfMsg::Linked(c)
+                        }
+                        Err(e) => QfMsg::LinkFailed(e.text),
+                    };
+                    let _ = tx.send(msg);
+                    wake();
+                }
+                Ok(QfCmd::Unlink) => {
+                    cfg = None;
+                    refused.clear();
+                    owner_refused = false;
+                }
+                Err(RecvTimeoutError::Timeout) => {}
+                Err(RecvTimeoutError::Disconnected) => break,
+            }
+        }
+    });
+}
 const HERE_SECS: u64 = 30;
 
 pub struct Core {
@@ -28,6 +87,10 @@ pub struct Core {
     web: Arc<Mutex<String>>,
     last_web: Instant,
     wake: Wake,
+    qf_tx: Sender<QfCmd>,
+    qf_rx: Receiver<QfMsg>,
+    pub qf_status: String,
+    pub qf_busy: bool,
 }
 
 impl Core {
@@ -45,6 +108,9 @@ impl Core {
         let (in_tx, in_rx) = channel();
         let web = Arc::new(Mutex::new("{}".to_string()));
         server::spawn(store.key.clone(), in_tx, web.clone(), wake.clone());
+        let (qf_tx, qf_cmd_rx) = channel();
+        let (qf_msg_tx, qf_rx) = channel();
+        qf_spawn(store.quitfind.clone(), qf_cmd_rx, qf_msg_tx, wake.clone());
         Core {
             store,
             bt_tx,
@@ -61,7 +127,68 @@ impl Core {
             web,
             last_web: Instant::now() - Duration::from_secs(10),
             wake,
+            qf_tx,
+            qf_rx,
+            qf_status: String::new(),
+            qf_busy: false,
         }
+    }
+
+    pub fn qf_link(&mut self, server: String, user: String, password: String) {
+        self.qf_busy = true;
+        self.qf_status = "Logging in, this takes a few seconds…".into();
+        let _ = self.qf_tx.send(QfCmd::Link { server, user, password });
+    }
+
+    pub fn qf_unlink(&mut self) {
+        self.store.quitfind = None;
+        self.store.devices.retain(|d| !d.id.starts_with("qf:"));
+        self.qf_status.clear();
+        self.dirty = true;
+        let _ = self.qf_tx.send(QfCmd::Unlink);
+    }
+
+    /// Mirror the register: one local device "qf:<account>" per QuitFind device.
+    fn qf_apply(&mut self, devs: Vec<RemoteDevice>) {
+        let names: HashMap<String, String> = devs.iter().map(|d| (d.username.clone(), d.name.clone())).collect();
+        let ids: HashSet<String> = devs.iter().map(|d| format!("qf:{}", d.username)).collect();
+        self.store.devices.retain(|d| !d.id.starts_with("qf:") || ids.contains(&d.id));
+        for d in devs {
+            let id = format!("qf:{}", d.username);
+            let kind = match d.kind.as_str() {
+                "tag" => Kind::Tag,
+                "tablet" => Kind::Tablet,
+                "laptop" => Kind::Laptop,
+                "pc" => Kind::Computer,
+                _ => Kind::Phone,
+            };
+            let to_fix = |f: &fmd::RemoteFix| Fix {
+                lat: f.lat,
+                lon: f.lon,
+                t: f.t,
+                acc: f.acc,
+                via: match &f.seen_by {
+                    Some(s) => format!("QuitFind ({}), seen by {}", f.provider, names.get(s).unwrap_or(s)),
+                    None => format!("QuitFind ({})", f.provider),
+                },
+            };
+            if !self.store.devices.iter().any(|x| x.id == id) {
+                self.store.devices.push(Device {
+                    id: id.clone(), name: d.name.clone(), kind, what: String::new(), lost: false,
+                    seen: None, last: None, history: Vec::new(), battery: None,
+                });
+            }
+            let dev = self.store.devices.iter_mut().find(|x| x.id == id).expect("just added");
+            dev.name = d.name.clone();
+            dev.kind = kind;
+            dev.what = d.error.clone().unwrap_or_else(|| "QuitFind".into());
+            let start = d.fixes.len().saturating_sub(200);
+            dev.history = d.fixes[start..].iter().map(to_fix).collect();
+            dev.last = d.fixes.last().map(to_fix);
+            dev.seen = d.fixes.last().map(|f| f.t);
+            dev.battery = d.fixes.iter().rev().find_map(|f| f.bat);
+        }
+        self.dirty = true;
     }
 
     pub fn say(&mut self, text: impl Into<String>) {
@@ -75,6 +202,7 @@ impl Core {
             && serde_json::to_vec_pretty(&self.store)
                 .ok()
                 .is_some_and(|d| std::fs::write(&tmp, d).is_ok())
+            && restrict(&tmp)
             && std::fs::rename(&tmp, &path).is_ok();
         if !ok {
             self.say("Could not save your devices to disk");
@@ -116,6 +244,25 @@ impl Core {
 
     /// Handle everything that arrived; call often (every frame or every second).
     pub fn poll(&mut self) {
+        while let Ok(msg) = self.qf_rx.try_recv() {
+            match msg {
+                QfMsg::Linked(c) => {
+                    self.qf_busy = false;
+                    self.qf_status = "Linked. Loading your devices…".into();
+                    self.store.quitfind = Some(c);
+                    self.dirty = true;
+                }
+                QfMsg::LinkFailed(e) => {
+                    self.qf_busy = false;
+                    self.qf_status = format!("Could not link: {e}");
+                }
+                QfMsg::Synced(devs) => {
+                    self.qf_status = format!("{} devices, updated {}", devs.len(), ago(now()));
+                    self.qf_apply(devs);
+                }
+                QfMsg::Failed(e) => self.qf_status = format!("Sync failed: {e}"),
+            }
+        }
         while let Ok(msg) = self.bt_rx.try_recv() {
             match msg {
                 BtMsg::Status(s) => self.bt_status = s,
@@ -285,4 +432,10 @@ impl Core {
         })
         .to_string()
     }
+}
+
+/// The settings file holds keys: readable for this user only.
+fn restrict(path: &std::path::Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)).is_ok()
 }

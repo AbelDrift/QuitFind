@@ -3,6 +3,7 @@
 //! phones and laptops report their own location over the local network.
 mod bt;
 mod core;
+mod fmd;
 mod server;
 
 use crate::core::Core;
@@ -123,6 +124,8 @@ struct Store {
     devices: Vec<Device>,
     computer: Option<(f64, f64)>,
     key: String,
+    #[serde(default)]
+    quitfind: Option<fmd::QfConfig>,
 }
 
 fn now() -> u64 {
@@ -199,6 +202,9 @@ struct App {
     confirm_remove: bool,
     lan_ip: String,
     shot: Option<(PathBuf, u32)>,
+    qf_server: String,
+    qf_user: String,
+    qf_password: String,
 }
 
 impl App {
@@ -224,6 +230,9 @@ impl App {
             confirm_remove: false,
             lan_ip: lan_ip(),
             shot: shot.map(|p| (p, 0)),
+            qf_server: String::new(),
+            qf_user: String::new(),
+            qf_password: String::new(),
         }
     }
 
@@ -391,6 +400,7 @@ impl App {
     }
 
     fn connect(&mut self, ui: &mut egui::Ui) {
+        self.quitfind_card(ui);
         let url = format!("http://{}:{}/report?key={}", self.lan_ip, server::PORT, self.core.store.key);
         let web = format!("http://{}:{}/#key={}", self.lan_ip, server::PORT, self.core.store.key);
         card(ui, |ui| {
@@ -434,6 +444,31 @@ impl App {
                 .color(GREY)
                 .size(12.0),
         );
+    }
+
+    fn quitfind_card(&mut self, ui: &mut egui::Ui) {
+        card(ui, |ui| {
+            ui.label(RichText::new("🗺 QuitFind server").strong().size(16.0));
+            if let Some(c) = self.core.store.quitfind.clone() {
+                ui.label(format!("Linked as {} on {}", c.user, c.server));
+                ui.label(RichText::new(&self.core.qf_status).color(GREY).size(12.0));
+                if ui.button("Unlink").clicked() {
+                    self.core.qf_unlink();
+                }
+                return;
+            }
+            ui.label("Show all devices of your QuitFind owner account on this map (create it on the QuitFind web page).");
+            ui.add(egui::TextEdit::singleline(&mut self.qf_server).hint_text("Server, e.g. https://…"));
+            ui.add(egui::TextEdit::singleline(&mut self.qf_user).hint_text("Owner account name"));
+            ui.add(egui::TextEdit::singleline(&mut self.qf_password).password(true).hint_text("Password"));
+            let ready = !self.core.qf_busy && !self.qf_server.trim().is_empty() && !self.qf_user.trim().is_empty() && !self.qf_password.is_empty();
+            if ui.add_enabled(ready, egui::Button::new("Link")).clicked() {
+                self.core.qf_link(self.qf_server.trim().into(), self.qf_user.trim().into(), std::mem::take(&mut self.qf_password));
+            }
+            if !self.core.qf_status.is_empty() {
+                ui.label(RichText::new(&self.core.qf_status).color(GREY).size(12.0));
+            }
+        });
     }
 
     fn details(&mut self, ui: &mut egui::Ui, id: &str) {

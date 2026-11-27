@@ -32,6 +32,9 @@ PATRONEN=(
   'wachtwoord in een instelling|(password|wachtwoord)[\"'"'"']?[ ]*[:=][ ]*[\"'"'"']?[^ \"'"'"'$<{][^ \"'"'"']{7,}'
 )
 
+# Code, geen geheim: een typenaam of constructor als waarde (password: String::new(), wachtwoord = ByteArray(...))
+CODE='(password|wachtwoord)["'"'"']?[ ]*[:=][ ]*[A-Z][A-Za-z0-9_]*(::|\(|<|\)|,|>)'
+
 if [[ "${1:-}" == "--alles" ]]; then
   mapfile -t BESTANDEN < <(git ls-files)
   lees() { cat -- "$1"; }
@@ -54,7 +57,7 @@ for f in "${BESTANDEN[@]}"; do
     # vertalingen bevatten nooit echte wachtwoorden ("Verkeerd wachtwoord" e.d.)
     [[ "$uitleg" == "wachtwoord in een instelling" && "$f" == */locales/*.json ]] && continue
     regex="${p#*|}"
-    if treffers="$(printf '%s\n' "$inhoud" | grep -nE -- "$regex" | grep -v 'geheimen-check: ok' | head -n 3)"; then
+    if treffers="$(printf '%s\n' "$inhoud" | grep -nE -- "$regex" | grep -v 'geheimen-check: ok' | grep -vE -- "$CODE" | head -n 3)"; then
       [[ -n "$treffers" ]] || continue
       echo "STOP  $f: mogelijk een $uitleg"
       printf '%s\n' "$treffers" | cut -c1-120 | sed 's/^/        regel /'
