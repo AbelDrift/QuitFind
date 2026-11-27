@@ -1,0 +1,16 @@
+# Voorbeeld: QuitFind-server met Docker Compose. Kopieer naar een eigen map, maak daar config.yml
+# (zie server/config.example.yml; zet een eigen RegistrationToken) en een lege map db/.
+# Overstappen vanaf FMD 0.17.1: dezelfde database werkt (alleen een datatype erbij) – maak eerst een back-up.
+services:
+  quitfind:
+    image: quitfind-server:dev          # cd server && docker build -t quitfind-server:dev .
+    container_name: quitfind
+    restart: unless-stopped
+    ports: ["127.0.0.1:8096:8080"]      # achter een reverse proxy of Tailscale serve met HTTPS
+    volumes:
+      - ./db/:/var/lib/fmd-server/db/
+      - ./config.yml:/etc/fmd-server/config.yml:ro
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges]
+    mem_limit: 512m
