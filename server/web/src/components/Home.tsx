@@ -141,7 +141,11 @@ const Home = () => {
     <>
       <AccountInfoModal isOpen={accountInfoOpen} onClose={() => setAccountInfoOpen(false)} />
 
-      <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        ownerMode={ownerStatus === 'owner'}
+      />
     </>
   );
 

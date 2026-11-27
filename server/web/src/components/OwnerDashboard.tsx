@@ -32,6 +32,18 @@ type Range = keyof typeof RANGES;
 const POLL_MS = 60 * 1000;
 const POLL_AFTER_LOCATE_MS = 10 * 1000; // for two minutes after a locate command
 
+// Ontsleutelde velden komen van het apparaat zelf: een misvormd item mag het dashboard niet laten crashen
+const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
+function isValidLocation(l: Location): boolean {
+  return (
+    isNum(l?.lat) &&
+    isNum(l?.lon) &&
+    Math.abs(l.lat) <= 90 &&
+    Math.abs(l.lon) <= 180 &&
+    isNum(l?.date)
+  );
+}
+
 export const OwnerDashboard = () => {
   const { t } = useTranslation(['dashboard', 'errors']);
   const items = useOwner((s) => s.items);
@@ -57,7 +69,10 @@ export const OwnerDashboard = () => {
         let message = '';
         try {
           const items = await deviceApi(d).getLocations();
-          const list = items.map((it) => it.item).sort((a, b) => a.date - b.date);
+          const list = items
+            .map((it) => it.item)
+            .filter(isValidLocation)
+            .sort((a, b) => a.date - b.date);
           setLocations((prev) => ({ ...prev, [d.username]: list }));
         } catch (error) {
           // keep the locations we have (a network hiccup should not empty the map)

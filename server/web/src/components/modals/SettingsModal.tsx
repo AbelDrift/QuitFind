@@ -17,9 +17,10 @@ import { LanguageNativeSelect } from '../LanguageNativeSelect';
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  ownerMode?: boolean; // QuitFind: eigenaar-account (bevat alleen het apparatenregister)
 }
 
-export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
+export const SettingsModal = ({ isOpen, onClose, ownerMode = false }: SettingsModalProps) => {
   const { userData, units } = useStore();
   const { t } = useTranslation(['settings', 'login', 'common', 'errors']);
 
@@ -135,7 +136,8 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
 
             <div>
               <h3 className="text-fmd-green mb-3 font-semibold">{t('account')}</h3>
-              <div className="flex flex-wrap gap-3 mb-3">
+              {ownerMode && <p className="mb-3 text-sm">{t('owner_mode_note')}</p>}
+              <div className={ownerMode ? 'hidden' : 'flex flex-wrap gap-3 mb-3'}>
                 <Button variant="secondary" onClick={() => void handleExport()}>
                   <Download className="h-4 w-4" />
                   {t('export_data')}
@@ -143,12 +145,20 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <Button variant="destructive" onClick={() => setShowDeleteLocationsConfirm(true)}>
+                <Button
+                  variant="destructive"
+                  className={ownerMode ? 'hidden' : ''}
+                  onClick={() => setShowDeleteLocationsConfirm(true)}
+                >
                   <MapPinMinus className="h-4 w-4" />
                   {t('delete_locations.button')}
                 </Button>
 
-                <Button variant="destructive" onClick={() => setShowDeletePicturesConfirm(true)}>
+                <Button
+                  variant="destructive"
+                  className={ownerMode ? 'hidden' : ''}
+                  onClick={() => setShowDeletePicturesConfirm(true)}
+                >
                   <ImageMinus className="h-4 w-4" />
                   {t('delete_pictures.button')}
                 </Button>

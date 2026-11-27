@@ -107,18 +107,56 @@ class Session implements DeviceSession {
     }
     if (!this.current) {
       const { username, pwk64 } = this.device;
+      const key = refusalKey(this.device);
+      const refused = readRefusals()[key];
+      // geweigerde sleutel: niet opnieuw proberen, ook niet na herladen (7 missers = account 10 min op slot)
+      if (refused && (refused.status !== 423 || Date.now() - refused.at < LOCK_MS)) {
+        return Promise.reject(new ApiError('refused', refused.status));
+      }
       const login = serial(() => loginV2(username, base64Decode(pwk64), ONE_WEEK_SECONDS, ''));
       this.current = login;
-      login.catch((error) => {
-        const final = error instanceof ApiError && [403, 404, 423].includes(error.status);
-        if (this.current === login && !final) this.current = null; // try again on the next call
-      });
+      login.then(
+        () => writeRefusal(key, null),
+        (error) => {
+          const status = error instanceof ApiError ? error.status : 0;
+          if ([403, 404, 423].includes(status)) writeRefusal(key, { status, at: Date.now() });
+          if (this.current === login && status !== 403 && status !== 404) this.current = null; // 423/netwerk: later opnieuw
+        }
+      );
     }
     return this.current;
   }
 }
 
 const sessions = new Map<string, { session: Session; api: ApiV2Service }>();
+
+// Geweigerde logins per apparaat, bewaard in localStorage onder een hash (geen gebruikersnamen in klare tekst)
+const REFUSED = 'quitfind-refused';
+const LOCK_MS = 10 * 60_000;
+type Refusal = { status: number; at: number };
+function refusalKey(d: DeviceEntry): string {
+  let h = 0x811c9dc5;
+  for (const c of `${d.username}:${d.addedAt}`)
+    h = Math.imul(h ^ c.charCodeAt(0), 0x01000193) >>> 0;
+  return h.toString(16);
+}
+function readRefusals(): Record<string, Refusal> {
+  try {
+    return JSON.parse(localStorage.getItem(REFUSED) ?? '{}') as Record<string, Refusal>;
+  } catch {
+    return {};
+  }
+}
+function writeRefusal(key: string, r: Refusal | null) {
+  try {
+    const all = readRefusals();
+    if (r) all[key] = r;
+    else delete all[key];
+    localStorage.setItem(REFUSED, JSON.stringify(all));
+  } catch {
+    // privévenster of geblokkeerde opslag: dan alleen de bescherming binnen deze sessie
+  }
+}
 
 // The API of one device's own account (locations, commands, pictures)
 export function deviceApi(device: DeviceEntry, first?: UserData): ApiV2Service {

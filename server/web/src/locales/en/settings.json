@@ -29,5 +29,6 @@
   "language": {
     "title": "Language"
   },
-  "about_text": "A server to communicate with the FMD Android app, to locate and control your devices."
+  "about_text": "A server to communicate with the FMD Android app, to locate and control your devices.",
+  "owner_mode_note": "This is your owner account: it only holds the device register. Export or delete locations and photos per device (log in to the device itself). 'Delete account' here deletes the owner account and its register; the devices themselves are kept."
 }

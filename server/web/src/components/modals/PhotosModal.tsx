@@ -41,18 +41,23 @@ export const PhotosModal = ({ isOpen, onClose, api }: PhotosModalProps) => {
   // Load initial data
   useEffect(() => {
     if (isOpen && userData) {
+      let stale = false; // ander apparaat of venster dicht: dit antwoord niet meer tonen
+      useStore.setState({ pictures: [], isPicturesLoading: true });
       void (async () => {
-        useStore.setState({ isPicturesLoading: true });
         try {
           const pics = await service.getPictures();
+          if (stale) return;
           useStore.setState({ pictures: pics });
           setSelectedIndex(pics.length - 1);
         } catch (err) {
-          toast.error(err instanceof Error ? err.message : 'Failed to load photos');
+          if (!stale) toast.error(err instanceof Error ? err.message : 'Failed to load photos');
         } finally {
-          useStore.setState({ isPicturesLoading: false });
+          if (!stale) useStore.setState({ isPicturesLoading: false });
         }
       })();
+      return () => {
+        stale = true;
+      };
     }
   }, [isOpen, userData, service]);
 

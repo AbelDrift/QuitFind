@@ -40,5 +40,6 @@
     "title": "Alle foto's verwijderen?",
     "description": "Alle foto's worden definitief van de server verwijderd. Dit kan niet ongedaan worden gemaakt.",
     "success": "Foto's met succes verwijderd."
-  }
+  },
+  "owner_mode_note": "Dit is je eigenaar-account: het bevat alleen het apparatenregister. Locaties en foto's exporteren of wissen doe je per apparaat (log daarvoor in op het apparaat zelf). 'Account verwijderen' wist hier het eigenaar-account met het register; de apparaten zelf blijven bestaan."
 }

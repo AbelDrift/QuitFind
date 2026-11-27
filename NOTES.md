@@ -139,3 +139,7 @@ Architect-stap mislukte (gebruikslimiet; maandelijkse bestedingslimiet bereikt; 
     LoginForm.tsx:60 Engelse serverfouten; DeviceDialog.tsx:138 velden zonder zichtbaar label; OwnerDashboard.tsx:32 elke 60 s
     volledige geschiedenis van elk apparaat ophalen.
   Weerlegd: owner.ts:110 (veld server genegeerd: niemand schrijft het), OwnerDashboard.tsx:60 (variant zonder schrijver).
+- 2026-11-27 (avond): 4 bevestigde medium-punten OPGELOST (hoofdsessie): ongeldige locaties gefilterd (isValidLocation),
+  geweigerde logins bewaard over herladen heen (localStorage 'quitfind-refused', gehashte sleutel; 423 pas na 10 min opnieuw),
+  foto's per apparaat (store leeg bij openen, late antwoorden genegeerd), instellingen in eigenaar-modus verbergen
+  export/wis-knoppen met uitleg. Browsertest + e2e opnieuw groen. Nog open: DevicesMap invalidateSize (<1024px) en de low-punten hierboven.
