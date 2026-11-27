@@ -5,7 +5,8 @@ QuitFind is een uitbreiding (fork) van [FMD – Find My Device](https://gitlab.c
 hoort bij **QuitSuite** (QuitChat, QuitFind en later QuitCloud).
 
 > Stand (27 november 2026): eerste werkende versie van server, webpagina, Android-app en
-> desktopapp, met tests. Nog niet op een echte telefoon uitgeprobeerd.
+> desktopapp, met tests. De Android-app is getest in een emulator en de desktopapp op een virtueel
+> scherm; nog niet op een echte telefoon en nog niet met echte tags.
 
 ## Wat het kan
 | onderdeel | wat |
@@ -23,9 +24,13 @@ de lijst, end-to-end versleuteld; de server ziet alleen versleutelde gegevens. Z
 Een goedkope Bluetooth-tag weet zelf niet waar hij is: hij roept alleen "ik ben tag X". De locatie komt
 van het apparaat dat hem hoort. QuitFind gebruikt alleen **jouw eigen apparaten**, dus een tag wordt
 gevonden als je telefoon (of laptop) in de buurt komt – niet als hij ergens in de stad ligt.
-- **Werkt nu:** tags met een vaste ID: eenvoudige sleutelvinders (MAC-adres), iBeacon en Eddystone.
-- **Nog niet:** Google Find Hub-tags (zoals Fresh 'n Rebel in Find Hub) wisselen steeds van ID. Die
-  herkent QuitFind pas met de sleutel van de tag uit je Google-account (geplande, optionele Google-brug).
+- **Tags met een vaste ID:** eenvoudige sleutelvinders (MAC-adres), iBeacon en Eddystone.
+- **Google Find Hub-tags** (zoals Fresh 'n Rebel in Find Hub) wisselen elk kwartier van ID. QuitFind
+  herkent ze met de sleutel van de tag (EIK) en het koppelmoment; die haal je eenmalig uit je
+  Google-account via de optionele [Google-brug](bridge/google/LEESMIJ.md). Daarna herkent je telefoon
+  ze zonder Google.
+- **Ook als jij er niet bent:** met de Google-brug komen locaties uit Google's netwerk binnen
+  (optioneel, met een reserve-Google-account; Google kan die toegang blokkeren).
 
 ## Gebruiken
 **Server** (Docker):
@@ -66,5 +71,5 @@ GPL-3.0, net als FMD.
 ## English summary
 QuitFind is a GPL-3.0 fork of FMD (Find My Device). It adds an end-to-end encrypted device register to the
 server, a web dashboard with all your devices on one map, an Android map tab plus scanning for your own
-Bluetooth tags (MAC, iBeacon, Eddystone), and a Linux desktop app that shows all your devices. Tags are
-located only by your own devices (no crowd network). Google Find Hub tags are not supported yet.
+Bluetooth tags (MAC, iBeacon, Eddystone, and Google Find Hub tags once their key is imported), and a Linux
+desktop app that shows all your devices. An optional bridge imports locations from Google's Find Hub network.
