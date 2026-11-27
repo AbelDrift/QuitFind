@@ -38,6 +38,11 @@ var (
 		Name: "fmd_pictures",
 		Help: "Number of stored pictures",
 	})
+	// QuitFind: entries in the encrypted device registers (data type "device")
+	DeviceEntries = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "quitfind_device_entries",
+		Help: "Number of stored device-register entries",
+	})
 
 	// Temporary numbers
 	PendingCommands = promauto.NewGauge(prometheus.GaugeOpts{

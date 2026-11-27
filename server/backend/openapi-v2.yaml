@@ -431,7 +431,7 @@ components:
       description: Type of the encrypted data.
       schema:
         type: string
-        enum: [command, location, picture]
+        enum: [command, location, picture, device]
 
   securitySchemes:
     bearerAuth:

@@ -16,6 +16,8 @@ const (
 	DataTypeCommand  DataType = 0
 	DataTypeLocation DataType = 1
 	DataTypePicture  DataType = 2
+	// QuitFind: encrypted device register in an owner account (one item per device; never pruned)
+	DataTypeDevice DataType = 3
 )
 
 func ParseDataType(s string) (DataType, error) {
@@ -26,6 +28,8 @@ func ParseDataType(s string) (DataType, error) {
 		return DataTypeLocation, nil
 	case "picture":
 		return DataTypePicture, nil
+	case "device":
+		return DataTypeDevice, nil
 	default:
 		return 0, fmt.Errorf("unknown data type %s", s)
 	}
@@ -39,6 +43,8 @@ func getDataMetric(typ DataType) prometheus.Gauge {
 		return metrics.Locations
 	case DataTypePicture:
 		return metrics.Pictures
+	case DataTypeDevice:
+		return metrics.DeviceEntries
 	default:
 		log.Warn().Int("type", int(typ)).Msg("unhandled data type for metrics")
 		return promauto.NewGauge(prometheus.GaugeOpts{
@@ -56,6 +62,8 @@ func (u *UserRepository) getNumToKeep(typ DataType) int {
 		return u.maxSavedLoc
 	case DataTypePicture:
 		return u.maxSavedPic
+	case DataTypeDevice:
+		return KEEP_ALL
 	default:
 		log.Warn().Int("type", int(typ)).Msg("unhandled data type for numToKeep")
 		return KEEP_ALL

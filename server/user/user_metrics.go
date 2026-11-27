@@ -29,6 +29,10 @@ func initializeUserMetrics(db *FMDDB) {
 	db.DB.Model(&DataV2{}).Where("type = ?", DataTypeCommand).Count(&pendingCommandCount)
 	metrics.PendingCommands.Add(float64(pendingCommandCount))
 
+	var deviceEntryCount int64
+	db.DB.Model(&DataV2{}).Where("type = ?", DataTypeDevice).Count(&deviceEntryCount)
+	metrics.DeviceEntries.Set(float64(deviceEntryCount))
+
 	var pendingMessageCount int64
 	db.DB.Model(&Message{}).Count(&pendingMessageCount)
 	metrics.PendingMessages.Set(float64(pendingMessageCount))

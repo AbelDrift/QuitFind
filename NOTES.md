@@ -35,3 +35,22 @@
 - 2026-11-26 22:05: workflow quitfind-begrijpen (run wf_bb5605f6-552): 8 lezers (server-api, web, crypto, android, tags, bridge, desktop, suite) → architect-bouwplan. Hervatten: Workflow scriptPath ~/.claude/projects/-home-abel-claude-algemeen/63eeee7a-6517-415a-ba3c-8a163a78d5ff/workflows/scripts/quitfind-begrijpen-wf_bb5605f6-552.js + resumeFromRunId wf_bb5605f6-552. Goal van Abel: doorwerken tot de app klaar lijkt of het tegoed op is.
 - 2026-11-26: android/ = FMD-android v0.17.1 via `git subtree add --prefix android https://gitlab.com/fmd-foss/fmd-android.git v0.17.1 --squash` (5,3 MB). desktop/ = broncode (src, Cargo.toml, Cargo.lock) gekopieerd uit Craft Anything (clean room, eigen code van Abel; target/ en shots/ niet meegenomen).
 - 2026-11-26 22:12: Android-basisbouw OK: assembleDevDebug in 5m20s → android/app/build/outputs/apk/dev/debug/app-dev-debug.apk. Bouwen: cd android && JAVA_HOME=~/.local/opt/jdk-21.0.13+9 ANDROID_HOME=~/ontwikkeling/android-sdk systemd-run --user --scope -q -p MemoryMax=3500M -p MemorySwapMax=0 nice -n 10 ./gradlew --no-daemon --console=plain -Dorg.gradle.jvmargs=-Xmx1536m -Pkotlin.compiler.execution.strategy=in-process assembleDevDebug (Gradle 9.5.1, compileSdk 37, Java 21, Compose; applicationId de.nulide.findmydevice → later eigen id).
+
+## Ontwerp (2026-11-27, na onderzoek server-api/web/crypto/android)
+- Eén FMD-account per apparaat (upstream-compatibel) + één EIGENAAR-account met versleuteld
+  apparatenregister (nieuw datatype `device`, nooit opgeschoond). Formaat: docs/apparatenregister.md
+  (K_kek_device = HKDF(K_master, "quitfind_v1_kek_device"||SHA256(naam)); items met pwk64 zodat
+  apps zonder Argon2 per apparaat kunnen inloggen).
+- Tags = eigen FMD-account per tag (naam t-<16 hex>); telefoon/laptop/brug loggen in met de pwk
+  van de tag en posten een gewone versleutelde locatie (provider "ble"/"google", extra velden
+  seenBy, rssi). Geen tag-specifieke servercode nodig.
+- Alleen protocol v2 (v1-accounts: doorverwijzen naar de migratie-wizard van FMD Android).
+- Sessies: altijd 1 week aanvragen; bij 401 opnieuw inloggen met opgeslagen pwk (server vergeet
+  tokens bij herstart). Logins nooit parallel (Argon2 128 MiB).
+- Web: dashboard naast de bestaande enkel-apparaatweergave; geen geneste routes (relatieve paden).
+  Bekende upstream-bugs meenemen: heading vs bearing, LocationMap.tsx:179 index-guard, export
+  met loc.time.
+- Server-wijziging fase 2: user/data_type.go (DataTypeDevice=3, KEEP_ALL), metrics.DeviceEntries,
+  user_metrics.go, openapi enum + user/data_type_test.go. Tests via `docker build --target builder`
+  + `docker run --network none quitfind-server:builder go test ./user/ ./backend/`.
+- Node-client tests/quitfind_v2.mjs + e2e tests/e2e_register.mjs (alleen tegen :8096; ruimt op).
