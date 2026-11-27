@@ -52,6 +52,7 @@ export const DevicesMap = ({ markers, track, selected, onSelect, nameOf }: Devic
   // The basic map view, as in LocationMap
   useEffect(() => {
     let map: LeafletType.Map | null = null;
+    let observer: ResizeObserver | null = null;
     let cancelled = false;
 
     void (async () => {
@@ -72,10 +73,13 @@ export const DevicesMap = ({ markers, track, selected, onSelect, nameOf }: Devic
       map.attributionControl?.setPrefix('');
       map.addControl(new FullScreen());
       setParts({ L, map, layer: L.layerGroup().addTo(map) });
+      observer = new ResizeObserver(() => map?.invalidateSize());
+      observer.observe(mapRef.current);
     })();
 
     return () => {
       cancelled = true;
+      observer?.disconnect();
       map?.remove();
     };
   }, []);

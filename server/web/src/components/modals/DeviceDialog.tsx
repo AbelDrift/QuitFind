@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { PasswordInput } from '@/components/PasswordInput';
 
@@ -120,6 +121,7 @@ export const DeviceDialog = ({ mode, onClose }: DeviceDialogProps) => {
         <form id="device-form" onSubmit={(e) => void submit(e)} className="space-y-4">
           {mode === 'link' && (
             <>
+              <Label htmlFor="device-username">{t('login:username_placeholder')}</Label>
               <Input
                 id="device-username"
                 value={form.username}
@@ -129,6 +131,7 @@ export const DeviceDialog = ({ mode, onClose }: DeviceDialogProps) => {
                 pattern="[\-_a-zA-Z0-9]{1,64}"
                 required
               />
+              <Label htmlFor="device-password">{t('login:password_placeholder')}</Label>
               <PasswordInput
                 id="device-password"
                 value={form.password}
@@ -139,6 +142,8 @@ export const DeviceDialog = ({ mode, onClose }: DeviceDialogProps) => {
               />
             </>
           )}
+
+          <Label htmlFor="device-name">{t('owner.name')}</Label>
 
           <Input
             id="device-name"
@@ -151,6 +156,7 @@ export const DeviceDialog = ({ mode, onClose }: DeviceDialogProps) => {
 
           {mode === 'tag' && (
             <>
+              <Label htmlFor="tag-kind">{t('owner.tag_kind')}</Label>
               <NativeSelect
                 id="tag-kind"
                 aria-label={t('owner.tag_kind')}
@@ -163,6 +169,7 @@ export const DeviceDialog = ({ mode, onClose }: DeviceDialogProps) => {
                   </NativeSelectOption>
                 ))}
               </NativeSelect>
+              <Label htmlFor="tag-id">{t('owner.tag_id')}</Label>
               <Input
                 id="tag-id"
                 value={form.id}
@@ -174,6 +181,7 @@ export const DeviceDialog = ({ mode, onClose }: DeviceDialogProps) => {
               />
               {askToken && (
                 <div>
+                  <Label htmlFor="tag-registration-token">{t('owner.registration_token')}</Label>
                   <Input
                     id="tag-registration-token"
                     value={form.token}
@@ -190,18 +198,21 @@ export const DeviceDialog = ({ mode, onClose }: DeviceDialogProps) => {
           )}
 
           {mode !== 'tag' && edit?.type !== 'tag' && (
-            <NativeSelect
-              id="device-type"
-              aria-label={t('owner.type')}
-              value={form.type}
-              onChange={field('type')}
-            >
-              {DEVICE_TYPES.filter((type) => type !== 'tag').map((type) => (
-                <NativeSelectOption key={type} value={type}>
-                  {t(`owner.types.${type}`)}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
+            <>
+              <Label htmlFor="device-type">{t('owner.type')}</Label>
+              <NativeSelect
+                id="device-type"
+                aria-label={t('owner.type')}
+                value={form.type}
+                onChange={field('type')}
+              >
+                {DEVICE_TYPES.filter((type) => type !== 'tag').map((type) => (
+                  <NativeSelectOption key={type} value={type}>
+                    {t(`owner.types.${type}`)}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </>
           )}
 
           <DialogFooter className="gap-3 sm:gap-3">

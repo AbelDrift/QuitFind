@@ -209,6 +209,8 @@ useStore.subscribe((state, prev) => {
 
 const owner = () => new ApiV2Service(); // the logged-in owner account
 
+let registerRetries = 0;
+
 export async function loadRegister(): Promise<void> {
   const user = useStore.getState().userData;
   const { status } = useOwner.getState();
@@ -222,7 +224,14 @@ export async function loadRegister(): Promise<void> {
   } catch (error) {
     if (status === 'owner') throw error; // a refresh failed: keep showing the register we have
     console.warn('No device register', error); // e.g. a server without the "device" type
+    const oldServer =
+      error instanceof ApiError && error.status === 500 && /unknown data type/i.test(error.message);
+    if (!oldServer && registerRetries < 3) {
+      registerRetries++; // a network hiccup: try again, instead of showing an owner the single-device view for good
+      setTimeout(() => void loadRegister().catch(() => undefined), 5_000 * registerRetries);
+    }
   }
+  if (items.length > 0) registerRetries = 0;
 
   if (useStore.getState().userData !== user) return; // logged out meanwhile
   // once shown, the dashboard stays (also after removing the last device)

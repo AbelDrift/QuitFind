@@ -13,12 +13,19 @@ export const hashPasswordInWorker = (
       type: 'module',
     });
 
+    const timer = setTimeout(() => {
+      worker.terminate(); // a stuck worker must not block every later login
+      reject(new Error('Password hashing timed out'));
+    }, 120_000);
+
     worker.onmessage = (ev) => {
+      clearTimeout(timer);
       resolve(ev.data as PasswordHashResult);
       worker.terminate();
     };
 
     worker.onerror = (err) => {
+      clearTimeout(timer);
       reject(new Error(err.message));
       worker.terminate();
     };
