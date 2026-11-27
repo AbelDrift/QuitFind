@@ -149,6 +149,7 @@ fn metres(a: (f64, f64), b: (f64, f64)) -> f64 {
     12_742_000.0 * h.sqrt().asin()
 }
 
+// The folder keeps its old name "open-find": existing devices of the earlier Open Find app stay where they are
 fn store_path() -> PathBuf {
     let base = std::env::var_os("XDG_CONFIG_HOME")
         .map(PathBuf::from)
@@ -182,7 +183,7 @@ fn lan_ip() -> String {
 }
 
 fn notify(text: &str) {
-    let _ = std::process::Command::new("notify-send").args(["Open Find", text]).spawn();
+    let _ = std::process::Command::new("notify-send").args(["QuitFind", text]).spawn();
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -215,7 +216,7 @@ impl App {
         let core = Core::new(Arc::new(move || wake_ctx.request_repaint()));
         let options = HttpOptions {
             cache: Some(cache_dir()),
-            user_agent: Some(walkers::HeaderValue::from_static("OpenFind-Desktop/0.1 (Linux)")),
+            user_agent: Some(walkers::HeaderValue::from_static("QuitFind-Desktop/0.1 (Linux)")),
             ..Default::default()
         };
         let mut map = MapMemory::default();
@@ -796,7 +797,7 @@ impl eframe::App for App {
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(RichText::new("⌖").size(24.0).color(ACCENT));
-                    ui.label(RichText::new("Open Find").size(21.0).strong());
+                    ui.label(RichText::new("QuitFind").size(21.0).strong());
                     ui.label(RichText::new("your devices, no Google account").color(GREY).size(13.0));
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         let lost = self.core.store.devices.iter().filter(|d| d.lost).count();
@@ -846,14 +847,14 @@ fn main() -> eframe::Result {
     if args.iter().any(|a| a == "--server") {
         // No window: Bluetooth, phone reports and the web page only (for a home server).
         let mut core = Core::new(Arc::new(|| {}));
-        println!("Open Find is running. Open http://{}:{}/#key={} in a browser.", lan_ip(), server::PORT, core.store.key);
+        println!("QuitFind is running. Open http://{}:{}/#key={} in a browser.", lan_ip(), server::PORT, core.store.key);
         loop {
             core.poll();
             std::thread::sleep(Duration::from_millis(500));
         }
     }
     let mut viewport = egui::ViewportBuilder::default()
-        .with_title("Open Find")
+        .with_title("QuitFind")
         .with_app_id("open-find")
         .with_inner_size([1280.0, 800.0])
         .with_min_inner_size([900.0, 560.0]);
@@ -861,7 +862,7 @@ fn main() -> eframe::Result {
         viewport = viewport.with_active(false);
     }
     let options = eframe::NativeOptions { viewport, ..Default::default() };
-    eframe::run_native("Open Find", options, Box::new(|cc| Ok(Box::new(App::new(cc, shot)))))
+    eframe::run_native("QuitFind", options, Box::new(|cc| Ok(Box::new(App::new(cc, shot)))))
 }
 
 #[cfg(test)]
