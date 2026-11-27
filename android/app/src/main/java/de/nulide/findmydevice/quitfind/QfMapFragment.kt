@@ -34,6 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -47,6 +48,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.content.Context
 import de.nulide.findmydevice.R
 import de.nulide.findmydevice.ui.TaggedFragment
 import de.nulide.findmydevice.ui.theme.AppTheme
@@ -186,13 +188,16 @@ private fun DevicesMap(devices: List<QfDeviceView>, selected: String?, onSelect:
     val context = LocalContext.current
     val map = remember {
         Configuration.getInstance().apply {
+            load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
             userAgentValue = context.packageName // OSM tile policy: identify the app
-            osmdroidBasePath = File(context.cacheDir, "osmdroid")
-            osmdroidTileCache = File(context.cacheDir, "osmdroid/tiles")
+            osmdroidBasePath = File(context.cacheDir, "osmdroid").apply { mkdirs() }
+            osmdroidTileCache = File(context.cacheDir, "osmdroid/tiles").apply { mkdirs() }
         }
         MapView(context).apply {
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
+            minZoomLevel = 3.0
+            maxZoomLevel = 19.0 // OSM tiles stop at 19; deeper zoom only shows the empty grid
             controller.setZoom(4.0)
             controller.setCenter(GeoPoint(52.1, 5.3))
         }
@@ -209,7 +214,7 @@ private fun DevicesMap(devices: List<QfDeviceView>, selected: String?, onSelect:
     // fit all devices once per new set of devices, and when a device is selected
     val fitKey = remember(devices, selected) { devices.map { it.device.username to it.locations.size } to selected }
     var fitted by remember { mutableStateOf<Any?>(null) }
-    AndroidView({ map }, modifier) { m ->
+    AndroidView({ map }, modifier.clipToBounds()) { m -> // the MapView draws outside its bounds otherwise
         m.overlays.clear()
         val points = ArrayList<GeoPoint>()
         devices.forEach { dv ->
@@ -230,12 +235,17 @@ private fun DevicesMap(devices: List<QfDeviceView>, selected: String?, onSelect:
         if (fitted != fitKey) {
             fitted = fitKey
             val focus = if (sel != null) (track.ifEmpty { listOfNotNull(sel.locations.lastOrNull()?.let { GeoPoint(it.lat, it.lon) }) }) else points
-            m.post {
+            val fit = {
                 when {
                     focus.size == 1 -> { m.controller.setZoom(16.0); m.controller.setCenter(focus[0]) }
-                    focus.size > 1 -> m.zoomToBoundingBox(BoundingBox.fromGeoPoints(focus).increaseByScale(1.3f), true)
+                    focus.size > 1 -> {
+                        m.zoomToBoundingBox(BoundingBox.fromGeoPoints(focus), false, 120)
+                        if (m.zoomLevelDouble > 17.0) m.controller.setZoom(17.0)
+                    }
                 }
             }
+            // fitting needs the map's size: before the first layout it would zoom in all the way
+            if (m.width > 0 && m.height > 0) m.post { fit() } else m.addOnFirstLayoutListener { _, _, _, _, _ -> fit() }
         }
         m.invalidate()
     }
