@@ -11,6 +11,9 @@
         <exclude
             domain="sharedpref"
             path="fmd_encrypted_settings.xml" />
+        <exclude
+            domain="sharedpref"
+            path="quitfind_owner.xml" />
 
         <!-- UnifiedPush -->
         <exclude
@@ -32,6 +35,9 @@
         <exclude
             domain="sharedpref"
             path="fmd_encrypted_settings.xml" />
+        <exclude
+            domain="sharedpref"
+            path="quitfind_owner.xml" />
 
         <!-- UnifiedPush -->
         <exclude

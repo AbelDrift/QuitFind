@@ -25,6 +25,7 @@ import de.nulide.findmydevice.data.Settings;
 import de.nulide.findmydevice.data.SettingsRepository;
 import de.nulide.findmydevice.net.MinRequiredVersionResult;
 import de.nulide.findmydevice.net.ServerCommandDownloader;
+import de.nulide.findmydevice.quitfind.QfMapFragment;
 import de.nulide.findmydevice.ui.home.CommandListFragment;
 import de.nulide.findmydevice.ui.home.TransportListFragment;
 import de.nulide.findmydevice.ui.settings.FMDServerActivity;
@@ -39,7 +40,7 @@ public class MainActivity extends FmdActivity {
 
     SettingsRepository settings;
 
-    private TaggedFragment commandsFragment, transportFragment, settingsFragment;
+    private TaggedFragment mapFragment, commandsFragment, transportFragment, settingsFragment;
     private TaggedFragment activeFragment;
 
     @Override
@@ -86,15 +87,18 @@ public class MainActivity extends FmdActivity {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
         bottomNav.setOnItemSelectedListener(navListener);
 
+        mapFragment = new QfMapFragment(); // QuitFind: map with all devices, first and default tab
         commandsFragment = new CommandListFragment();
         transportFragment = new TransportListFragment();
         settingsFragment = new SettingsFragment();
 
         if (savedInstanceState == null) {
-            activeFragment = commandsFragment;
+            activeFragment = mapFragment;
         } else {
             String tag = savedInstanceState.getString(KEY_ACTIVE_FRAGMENT_TAG);
-            if (tag == null || tag.equals(commandsFragment.getStaticTag())) {
+            if (tag != null && tag.equals(mapFragment.getStaticTag())) {
+                activeFragment = mapFragment;
+            } else if (tag == null || tag.equals(commandsFragment.getStaticTag())) {
                 activeFragment = commandsFragment;
             } else if (tag.equals(transportFragment.getStaticTag())) {
                 activeFragment = transportFragment;
@@ -135,7 +139,9 @@ public class MainActivity extends FmdActivity {
 
     private final NavigationBarView.OnItemSelectedListener navListener = (item) -> {
         int itemId = item.getItemId();
-        if (itemId == R.id.nav_commands) {
+        if (itemId == R.id.nav_map) {
+            activeFragment = mapFragment;
+        } else if (itemId == R.id.nav_commands) {
             activeFragment = commandsFragment;
         } else if (itemId == R.id.nav_transports) {
             activeFragment = transportFragment;

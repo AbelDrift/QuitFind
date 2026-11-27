@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name" translatable="false">FMD</string>
+    <string name="app_name" translatable="false">QuitFind</string>
 
     <!-- Generic -->
     <string name="Ok" translatable="false">@android:string/ok</string>
@@ -461,4 +461,21 @@
     <!-- Varia -->
     <string name="invalid_url">Invalid URL</string>
 
+    <!-- QuitFind -->
+    <string name="qf_tab_map">Map</string>
+    <string name="qf_link_title">Link your owner account</string>
+    <string name="qf_link_explain">The owner account holds the list of all your devices. Create it on the QuitFind web page of your server (“New owner account”), add your devices there, then link it here.</string>
+    <string name="qf_server">Server address</string>
+    <string name="qf_username">Owner account name</string>
+    <string name="qf_password">Password</string>
+    <string name="qf_link">Link</string>
+    <string name="qf_linking">Logging in, this takes a few seconds…</string>
+    <string name="qf_refresh">Refresh</string>
+    <string name="qf_unlink">Unlink</string>
+    <string name="qf_no_devices">No devices in the register yet. Add them on the web page.</string>
+    <string name="qf_never_seen">no location yet</string>
+    <string name="qf_seen_by">seen by %1$s</string>
+    <string name="qf_battery">battery %1$d%%</string>
+    <string name="qf_key_rejected">key rejected: link the device again on the web page</string>
+    <string name="qf_error">Could not load: %1$s</string>
 </resources>

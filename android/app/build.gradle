@@ -30,7 +30,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "de.nulide.findmydevice"
+        applicationId "org.codeberg.abeldrift.quitfind" // QuitFind: naast de echte FMD-app te installeren
         minSdkVersion 24
         // TODO: raise targetSdk again.
         // We supported targetSdk 34 until BluetoothCommand was added, which requires max 32 to work:
@@ -172,6 +172,7 @@ dependencies {
 
     implementation 'com.android.volley:volley:1.2.1'
     implementation 'com.google.android.material:material:1.14.0'
+    implementation 'org.osmdroid:osmdroid-android:6.1.20' // QuitFind: kaart
     implementation 'com.google.code.gson:gson:2.15.0'
 
     // Networking

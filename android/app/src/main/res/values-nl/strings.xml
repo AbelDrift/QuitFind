@@ -350,4 +350,22 @@
     <string name="proto_v2_wizard_step2_button_migrate_data">Gegevens migreren</string>
     <string name="proto_v2_wizard_step2_text_migration_in_progress">Migratie loopt…</string>
     <string name="proto_v2_wizard_step3_button_close">Assistent stoppen</string>
+
+    <!-- QuitFind -->
+    <string name="qf_tab_map">Kaart</string>
+    <string name="qf_link_title">Koppel je eigenaar-account</string>
+    <string name="qf_link_explain">Het eigenaar-account bevat de lijst van al je apparaten. Maak het aan op de QuitFind-webpagina van je server („Nieuw eigenaar-account”), voeg daar je apparaten toe en koppel het dan hier.</string>
+    <string name="qf_server">Serveradres</string>
+    <string name="qf_username">Naam eigenaar-account</string>
+    <string name="qf_password">Wachtwoord</string>
+    <string name="qf_link">Koppelen</string>
+    <string name="qf_linking">Bezig met inloggen, dit duurt een paar seconden…</string>
+    <string name="qf_refresh">Vernieuwen</string>
+    <string name="qf_unlink">Ontkoppelen</string>
+    <string name="qf_no_devices">Nog geen apparaten in het register. Voeg ze toe op de webpagina.</string>
+    <string name="qf_never_seen">nog geen locatie</string>
+    <string name="qf_seen_by">gezien door %1$s</string>
+    <string name="qf_battery">batterij %1$d%%</string>
+    <string name="qf_key_rejected">sleutel geweigerd: koppel het apparaat opnieuw op de webpagina</string>
+    <string name="qf_error">Laden mislukt: %1$s</string>
 </resources>
