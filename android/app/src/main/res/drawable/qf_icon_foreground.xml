@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- QuitFind: witte locatiespeld met een oranje (#FFB547) tag die "uitstapt", zoals de Q-staart van QuitChat -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFF" android:pathData="M52,26C40.4,26 31,35.4 31,47C31,62.75 52,82 52,82C52,82 73,62.75 73,47C73,35.4 63.6,26 52,26Z" />
+    <path android:fillColor="#17324D" android:pathData="M43,47a9,9 0,1 0,18 0a9,9 0,1 0,-18 0Z" />
+    <path android:fillColor="#FFB547" android:pathData="M66,71a7,7 0,1 0,14 0a7,7 0,1 0,-14 0Z" />
+</vector>

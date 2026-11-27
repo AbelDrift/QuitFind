@@ -1,6 +1,6 @@
 {
-  "name": "FMD Server",
-  "short_name": "FMD",
+  "name": "QuitFind",
+  "short_name": "QuitFind",
   "description": "Locate and control your devices.",
   "start_url": ".",
   "scope": ".",
