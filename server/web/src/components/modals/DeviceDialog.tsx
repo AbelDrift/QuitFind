@@ -11,6 +11,7 @@ import {
   linkDevice,
   registerSettings,
   TAG_KINDS,
+  isValidTagId,
   useOwner,
   type DeviceEntry,
   type DeviceType,
@@ -68,6 +69,10 @@ export const DeviceDialog = ({ mode, onClose }: DeviceDialogProps) => {
       if (mode === 'link') {
         await linkDevice(form.username.trim(), form.password, name, form.type as DeviceType);
       } else if (mode === 'tag') {
+        if (!isValidTagId(form.kind, form.id)) {
+          toast.error(t('owner.tag_id_invalid'));
+          return;
+        }
         const tag = { kind: form.kind, id: form.id.trim() };
         await addTag(name, tag, askToken ? form.token.trim() : undefined);
       } else {
@@ -162,7 +167,8 @@ export const DeviceDialog = ({ mode, onClose }: DeviceDialogProps) => {
                 id="tag-id"
                 value={form.id}
                 onChange={field('id')}
-                placeholder={t('owner.tag_id')}
+                placeholder={t(`owner.tag_id_hint.${form.kind}`)}
+                aria-label={t('owner.tag_id')}
                 autoComplete="off"
                 required
               />

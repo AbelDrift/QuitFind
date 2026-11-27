@@ -15,6 +15,18 @@ export const DEVICE_TYPES = ['phone', 'tablet', 'laptop', 'pc', 'tag'] as const;
 export type DeviceType = (typeof DEVICE_TYPES)[number];
 export const TAG_KINDS = ['mac', 'ibeacon', 'eddystone', 'fmdn'] as const;
 
+// Same rules as QfTagMatcher.identityOf in the Android app: an id the phone cannot match is refused here
+export function isValidTagId(kind: string, id: string): boolean {
+  const v = id.trim();
+  if (kind === 'mac') return /^[0-9a-f]{2}([:-][0-9a-f]{2}){5}$/i.test(v);
+  if (kind === 'ibeacon')
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:\d{1,5}:\d{1,5}$/i.test(
+      v
+    );
+  if (kind === 'eddystone') return /^[0-9a-f]{32}$/i.test(v.replace(/[:-]/g, ''));
+  return v.length > 0; // fmdn: via the Google bridge (not matched by phones yet)
+}
+
 export interface DeviceEntry {
   v: 1;
   kind: 'device';

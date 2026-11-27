@@ -63,6 +63,13 @@
       "ibeacon": "iBeacon",
       "eddystone": "Eddystone",
       "fmdn": "FMDN"
-    }
+    },
+    "tag_id_hint": {
+      "mac": "MAC address, e.g. AA:BB:CC:DD:EE:FF",
+      "ibeacon": "UUID:major:minor, e.g. f7826da6-4fa2-4e98-8024-bc5b71e0893e:1:12345",
+      "eddystone": "namespace + instance (32 hex), e.g. edd1ebeac04e5defa017:0123456789ab",
+      "fmdn": "Find Hub tag: works through the Google bridge"
+    },
+    "tag_id_invalid": "This Bluetooth ID does not have the right format for this kind of tag."
   }
 }
