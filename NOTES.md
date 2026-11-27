@@ -54,3 +54,4 @@
   user_metrics.go, openapi enum + user/data_type_test.go. Tests via `docker build --target builder`
   + `docker run --network none quitfind-server:builder go test ./user/ ./backend/`.
 - Node-client tests/quitfind_v2.mjs + e2e tests/e2e_register.mjs (alleen tegen :8096; ruimt op).
+- 2026-11-27 07:27: image met datatype device gebouwd, Go-tests ok (user, backend); testserver herstart; e2e_register.mjs SLAAGT (4 accounts, register, tagwaarneming via telefoon, verse client ziet alles, manipulatie geweigerd, opgeruimd). Workflow quitfind-dashboard (run wf_48eeefa5-91f): bouwer → 3 reviewers → verificatie → hersteller. Hervatten: Workflow scriptPath ~/.claude/projects/-home-abel-claude-algemeen/63eeee7a-6517-415a-ba3c-8a163a78d5ff/workflows/scripts/quitfind-dashboard-wf_48eeefa5-91f.js + resumeFromRunId wf_48eeefa5-91f.
