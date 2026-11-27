@@ -51,6 +51,8 @@ for f in "${BESTANDEN[@]}"; do
   inhoud="$(lees "$f" 2>/dev/null || true)"
   for p in "${PATRONEN[@]}"; do
     uitleg="${p%%|*}"
+    # vertalingen bevatten nooit echte wachtwoorden ("Verkeerd wachtwoord" e.d.)
+    [[ "$uitleg" == "wachtwoord in een instelling" && "$f" == */locales/*.json ]] && continue
     regex="${p#*|}"
     if treffers="$(printf '%s\n' "$inhoud" | grep -nE -- "$regex" | grep -v 'geheimen-check: ok' | head -n 3)"; then
       [[ -n "$treffers" ]] || continue

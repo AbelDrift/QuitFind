@@ -12,7 +12,7 @@ import {
 
 const enc = new TextEncoder();
 
-export type DataBlobType = 'command' | 'location' | 'picture';
+export type DataBlobType = 'command' | 'location' | 'picture' | 'device';
 
 // Contexts for key schedule
 export const CTX_PASSWORD = enc.encode('fmd_v2_password');
@@ -24,6 +24,8 @@ const CTX_MASTER = enc.encode('fmd_v2_master');
 const CTX_KEK_CMD = enc.encode('fmd_v2_kek_command');
 const CTX_KEK_LOC = enc.encode('fmd_v2_kek_location');
 const CTX_KEK_PIC = enc.encode('fmd_v2_kek_picture');
+// QuitFind: own context for the device register (docs/apparatenregister.md)
+const CTX_KEK_DEVICE = enc.encode('quitfind_v1_kek_device');
 
 // Contexts for data encryption
 const CTX_DEK = enc.encode('fmd_v2_dek_'); // location, ...
@@ -133,14 +135,33 @@ export async function decryptMasterKey(
 }
 
 /**
+ * QuitFind: creates a random master key for a new account and encrypts it
+ * (the inverse of decryptMasterKey: IV || AES-GCM(pre master key, master key)).
+ */
+export async function encryptNewMasterKey(
+  username: string,
+  preMasterKey: CryptoKey
+): Promise<string> {
+  const usernameHash = await hash(enc.encode(username));
+  const iv = crypto.getRandomValues(new Uint8Array(AES_IV_SIZE_BYTES));
+  const masterKeyBytes = crypto.getRandomValues(new Uint8Array(AES_KEY_SIZE_BYTES));
+
+  const additionalData = new Uint8Array([...CTX_MASTER, ...usernameHash]);
+  const algorithm: AesGcmParams = { name: 'AES-GCM', iv, additionalData };
+
+  const ciphertext = await crypto.subtle.encrypt(algorithm, preMasterKey, masterKeyBytes);
+  return base64Encode(new Uint8Array([...iv, ...new Uint8Array(ciphertext)]));
+}
+
+/**
  * Derives the data-specific key encryption keys (KEKs) from the master key.
  *
- * @returns [cmd kek, location kek, picture kek]
+ * @returns [cmd kek, location kek, picture kek, device kek (QuitFind)]
  */
 export async function deriveKeks(
   username: string,
   masterKey: CryptoKey
-): Promise<[CryptoKey, CryptoKey, CryptoKey]> {
+): Promise<[CryptoKey, CryptoKey, CryptoKey, CryptoKey]> {
   const usernameHash = await hash(enc.encode(username));
 
   const derive = async (ctx: Uint8Array<ArrayBuffer>): Promise<CryptoKey> => {
@@ -152,8 +173,9 @@ export async function deriveKeks(
   const cmdKey = await derive(CTX_KEK_CMD);
   const locKey = await derive(CTX_KEK_LOC);
   const picKey = await derive(CTX_KEK_PIC);
+  const devKey = await derive(CTX_KEK_DEVICE);
 
-  return [cmdKey, locKey, picKey];
+  return [cmdKey, locKey, picKey, devKey];
 }
 
 export async function encryptDataV2(

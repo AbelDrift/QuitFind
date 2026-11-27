@@ -18,5 +18,51 @@
   "accuracy": "Accuracy",
   "altitude": "Altitude",
   "speed": "Speed",
-  "bearing": "Bearing"
+  "bearing": "Bearing",
+  "owner": {
+    "add_device": "Add device",
+    "add_device_description": "Link an existing FMD account (protocol v2), for example the one of your phone. Its password is used once: your register keeps only the key derived from it, encrypted.",
+    "add_tag": "Add tag",
+    "add_tag_description": "Creates a new account for a Bluetooth tag. Your phones and laptops report where they see it.",
+    "edit": "Edit",
+    "remove": "Remove",
+    "remove_title": "Remove {{name}} from the register?",
+    "remove_message": "The account and its data stay on the server. You can link it again later with its password.",
+    "remove_tag_message": "The tag account stays on the server, but its password is random: after removing it, nobody can use it any more.",
+    "refresh": "Refresh",
+    "empty_hint": "Add a device or a tag to see it on the map.",
+    "name": "Name",
+    "type": "Type",
+    "tag_kind": "Kind of Bluetooth tag",
+    "tag_id": "Bluetooth ID (e.g. AA:BB:CC:DD:EE:FF)",
+    "registration_token": "Registration token of the server",
+    "registration_token_hint": "Needed once to create tag accounts; it is then stored encrypted in your register. Leave empty if the server has none.",
+    "busy": "Working…",
+    "never_seen": "not seen yet",
+    "seen_by": "seen by {{name}}",
+    "track_points_one": "{{count}} location in this period",
+    "track_points_other": "{{count}} locations in this period",
+    "wrong_password": "Wrong password",
+    "key_rejected": "The stored key is rejected (password changed?). Remove the device and link it again.",
+    "already_linked": "This account is already in your register",
+    "v1_account": "This account still uses protocol v1. Migrate it first in FMD Android.",
+    "range": {
+      "day": "24 hours",
+      "week": "7 days",
+      "all": "All"
+    },
+    "types": {
+      "phone": "Phone",
+      "tablet": "Tablet",
+      "laptop": "Laptop",
+      "pc": "PC",
+      "tag": "Tag"
+    },
+    "tag_kinds": {
+      "mac": "MAC address",
+      "ibeacon": "iBeacon",
+      "eddystone": "Eddystone",
+      "fmdn": "FMDN"
+    }
+  }
 }

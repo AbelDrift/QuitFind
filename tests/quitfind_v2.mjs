@@ -49,13 +49,14 @@ export function encItem(kek, type, username, obj, ms = Date.now()) {
   ]);
   return { clientItemIdHex: id.toString('hex'), unixMillis: ms, ciphertext64: b64(blob) };
 }
-export function decItem(kek, type, username, item) {
+export function decRaw(kek, type, username, item) {  // the plaintext bytes (commands are plain text)
   const id = Buffer.from(item.clientItemIdHex, 'hex'), blob = unb64(item.ciphertext64);
   if (blob.length < 88) throw new Error('ciphertext too short');
   const s = adSuffix(type, username, id, item.unixMillis);
   const dek = gcmDec(kek, blob.subarray(0, 60), Buffer.concat([utf8('fmd_v2_dek_'), s]));
-  return JSON.parse(gcmDec(dek, blob.subarray(60), Buffer.concat([utf8('fmd_v2_data_'), s])).toString('utf8'));
+  return gcmDec(dek, blob.subarray(60), Buffer.concat([utf8('fmd_v2_data_'), s]));
 }
+export const decItem = (kek, type, username, item) => JSON.parse(decRaw(kek, type, username, item).toString('utf8'));
 
 export class Client {
   constructor(base) { this.base = base.replace(/\/$/, '') + '/api/v2'; }

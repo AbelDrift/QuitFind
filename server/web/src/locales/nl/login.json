@@ -11,5 +11,18 @@
   "project_website": "Project-website",
   "source_code": "Broncode",
   "privacy_notice": "Privacyverklaring",
-  "login_slow": "Wachtwoordhashing lijkt traag te gaan. Dit gebeurt meestal wanneer JavaScript JIT is uitgeschakeld in uw browser. Schakel JIT in of wees geduldig en wacht tot 5 minuten."
+  "login_slow": "Wachtwoordhashing lijkt traag te gaan. Dit gebeurt meestal wanneer JavaScript JIT is uitgeschakeld in uw browser. Schakel JIT in of wees geduldig en wacht tot 5 minuten.",
+  "register": {
+    "switch": "Nieuw eigenaar-account",
+    "back": "Terug naar aanmelden",
+    "create": "Account aanmaken",
+    "creating": "Account aanmaken…",
+    "password_repeat": "Herhaal wachtwoord",
+    "password_mismatch": "De wachtwoorden zijn niet gelijk",
+    "token_placeholder": "Registratietoken (als de server er een heeft)",
+    "hint": "Een eigenaar-account toont al je apparaten op één kaart. Het bewaart de sleutels van je apparaten, versleuteld met dit wachtwoord: kies een sterk wachtwoord dat je nergens anders gebruikt.",
+    "username_hint": "Letters, cijfers, - en _ (hoogstens 64)",
+    "bad_token": "Registratietoken ongeldig",
+    "failed": "Account aanmaken mislukt"
+  }
 }

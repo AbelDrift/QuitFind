@@ -122,6 +122,8 @@ export const useStore = create<AppState>()(
             fingerprint: string;
           };
           const [keysV1, keysV2] = await Promise.all([getKeysV1(), getKeysV2()]);
+          // QuitFind: keys stored before the device register existed -> log in again once
+          if (keysV2 && !keysV2.deviceKek) throw new Error('stored keys without deviceKek');
 
           if (keysV1 || keysV2) {
             set({

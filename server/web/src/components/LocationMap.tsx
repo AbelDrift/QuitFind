@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type * as LeafletType from 'leaflet';
 import { FullScreen } from 'leaflet.fullscreen';
-import { useStore } from '@/lib/store';
+import type { Location } from '@/lib/api';
+import { useStore, type UnitSystem } from '@/lib/store';
 import { convertDistance, convertSpeed } from '@/utils/units';
 import { formatDateTime } from '@/utils/date';
 import { useThemeColors } from '@/hooks/useThemeColors';
@@ -19,12 +20,40 @@ const CIRCLE_WEIGHT = 0;
 
 const ACCURACY_CIRCLE_RANGE = 5;
 
-const formatProvider = (provider: string): string => {
+export const formatProvider = (provider: string): string => {
   const providerMap: Record<string, string> = {
     gps: 'GPS',
     network: 'Network',
+    ble: 'Bluetooth', // QuitFind tag sightings
   };
   return providerMap[provider] ?? provider;
+};
+
+// For text inside popup HTML (location data comes from the devices)
+export const esc = (value: unknown) =>
+  String(value).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+// Popup content of one location; `extra` is more (already escaped) HTML.
+export const locationPopup = (
+  loc: Location,
+  t: (key: string) => string,
+  units: UnitSystem,
+  extra = ''
+) => {
+  // FMD Android writes "heading"; older data may have "bearing"
+  const heading = loc.heading ?? loc.bearing;
+  return `
+        <div style="min-width: 5rem;">
+          <strong>${t('time')}:</strong> ${formatDateTime(loc.date)}<br/>
+          ${loc.bat >= 0 ? `<strong>${t('battery')}:</strong> ${esc(loc.bat)}%<br/>` : ''}
+          <strong>${t('provider')}:</strong> ${esc(formatProvider(loc.provider))}<br/>
+          ${loc.accuracy ? `<strong>${t('accuracy')}:</strong> ${convertDistance(loc.accuracy, units)}<br/>` : ''}
+          ${loc.altitude !== undefined ? `<strong>${t('altitude')}:</strong> ${convertDistance(loc.altitude, units)}<br/>` : ''}
+          ${loc.speed !== undefined ? `<strong>${t('speed')}:</strong> ${convertSpeed(loc.speed, units)}<br/>` : ''}
+          ${heading != null ? `<strong>${t('bearing')}:</strong> ${heading.toFixed(0)}°<br/>` : ''}
+          ${extra}
+        </div>
+      `;
 };
 
 const calculateZoomLevel = (accuracy?: number): number => {
@@ -176,7 +205,7 @@ export const LocationMap = () => {
       return;
     }
 
-    const location = locations[currentLocationIndex].item;
+    const location = locations[currentLocationIndex]?.item;
     if (!location) return;
 
     const { lat, lon } = location;
@@ -219,20 +248,11 @@ export const LocationMap = () => {
             : {}
         )
         .addTo(markersLayerRef.current)
-        .bindPopup(
-          `
-        <div style="min-width: 5rem;">
-          <strong>${t('time')}:</strong> ${formatDateTime(loc.date)}<br/>
-          <strong>${t('battery')}:</strong> ${loc.bat}%<br/>
-          <strong>${t('provider')}:</strong> ${formatProvider(loc.provider)}<br/>
-          ${loc.accuracy ? `<strong>${t('accuracy')}:</strong> ${convertDistance(loc.accuracy, units)}<br/>` : ''}
-          ${loc.altitude !== undefined ? `<strong>${t('altitude')}:</strong> ${convertDistance(loc.altitude, units)}<br/>` : ''}
-          ${loc.speed !== undefined ? `<strong>${t('speed')}:</strong> ${convertSpeed(loc.speed, units)}<br/>` : ''}
-          ${loc.bearing !== undefined ? `<strong>${t('bearing')}:</strong> ${loc.bearing.toFixed(0)}°` : ''}
-        </div>
-      `,
-          { autoClose: false, closeOnClick: false, closeButton: false }
-        );
+        .bindPopup(locationPopup(loc, t, units), {
+          autoClose: false,
+          closeOnClick: false,
+          closeButton: false,
+        });
 
       marker.on('mouseover', () => {
         marker.openPopup();

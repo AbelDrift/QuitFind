@@ -11,5 +11,18 @@
   "login_slow": "Password hashing appears to be slow. This usually happens when JavaScript JIT is disabled in your browser. Either enable JIT, or be patient and wait up to 5 minutes.",
   "project_website": "Project Website",
   "source_code": "Source Code",
-  "privacy_notice": "Privacy Notice"
+  "privacy_notice": "Privacy Notice",
+  "register": {
+    "switch": "New owner account",
+    "back": "Back to log in",
+    "create": "Create account",
+    "creating": "Creating account…",
+    "password_repeat": "Repeat password",
+    "password_mismatch": "The passwords do not match",
+    "token_placeholder": "Registration token (if the server has one)",
+    "hint": "An owner account shows all your devices on one map. It stores the keys of your devices, encrypted with this password: choose a strong password that you use nowhere else.",
+    "username_hint": "Letters, digits, - and _ (at most 64)",
+    "bad_token": "Registration token not valid",
+    "failed": "Creating the account failed"
+  }
 }

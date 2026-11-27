@@ -6,9 +6,11 @@ import { PhotosModal } from '@/components/modals/PhotosModal';
 import { AccountInfoModal } from '@/components/modals/AccountInfoModal';
 import { SettingsModal } from '@/components/modals/SettingsModal';
 import { Header } from '@/components/Header';
+import { OwnerDashboard } from '@/components/OwnerDashboard';
 import { Spinner } from '@/components/ui/spinner';
 import { apiService } from '@/lib/apiService';
 import { useStore } from '@/lib/store';
+import { loadRegister, useOwner } from '@/lib/owner';
 import { toast } from 'sonner';
 
 const second = 1000;
@@ -16,6 +18,7 @@ const minute = 60 * 1000;
 
 const Home = () => {
   const { isLoggedIn, userData, wasAuthRestoreTried, locations } = useStore();
+  const ownerStatus = useOwner((s) => s.status);
 
   const [photosOpen, setPhotosOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -52,6 +55,7 @@ const Home = () => {
   useEffect(() => {
     if (isLoggedIn && userData) {
       void fetchLocations();
+      void loadRegister(); // QuitFind: owner accounts get the dashboard
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn]);
@@ -110,7 +114,8 @@ const Home = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, userData, lastLocationsFetchedTime]);
 
-  if (!wasAuthRestoreTried) {
+  // QuitFind: also while the device register is read
+  if (!wasAuthRestoreTried || (isLoggedIn && ownerStatus === 'loading')) {
     return (
       <div className="dark:bg-fmd-dark-lighter flex min-h-screen items-center justify-center bg-gray-50">
         <Spinner size="lg" />
@@ -126,12 +131,33 @@ const Home = () => {
     );
   }
 
+  const header = (
+    <Header
+      onSettingsClick={() => setSettingsOpen(true)}
+      onAccountInfoClick={() => setAccountInfoOpen(true)}
+    />
+  );
+  const modals = (
+    <>
+      <AccountInfoModal isOpen={accountInfoOpen} onClose={() => setAccountInfoOpen(false)} />
+
+      <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+    </>
+  );
+
+  if (ownerStatus === 'owner') {
+    return (
+      <>
+        {header}
+        <OwnerDashboard />
+        {modals}
+      </>
+    );
+  }
+
   return (
     <>
-      <Header
-        onSettingsClick={() => setSettingsOpen(true)}
-        onAccountInfoClick={() => setAccountInfoOpen(true)}
-      />
+      {header}
 
       <div className="dark:bg-fmd-dark-lighter flex h-[calc(100vh-3.1rem)] flex-col bg-gray-50 text-gray-900 dark:text-white">
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 lg:flex-row lg:overflow-hidden">
@@ -152,9 +178,7 @@ const Home = () => {
 
       <PhotosModal isOpen={photosOpen} onClose={() => setPhotosOpen(false)} />
 
-      <AccountInfoModal isOpen={accountInfoOpen} onClose={() => setAccountInfoOpen(false)} />
-
-      <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      {modals}
     </>
   );
 };

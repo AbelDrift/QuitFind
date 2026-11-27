@@ -12,21 +12,22 @@ import { useTranslation } from 'react-i18next';
 interface PhotosModalProps {
   isOpen: boolean;
   onClose: () => void;
+  api?: ApiV2Service; // QuitFind: a device in the owner dashboard (default: the logged-in account)
 }
 
-export const PhotosModal = ({ isOpen, onClose }: PhotosModalProps) => {
+export const PhotosModal = ({ isOpen, onClose, api }: PhotosModalProps) => {
   const { t } = useTranslation(['modals', 'dashboard', 'errors']);
   const { userData, pictures, isPicturesLoading } = useStore();
+  const service = api ?? apiService();
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const moveBack = () => setSelectedIndex((i) => Math.max(0, i - 1));
   const moveForward = () => setSelectedIndex((i) => Math.min(pictures.length - 1, i + 1));
 
   const deletePhoto = async () => {
-    const service = apiService() as ApiV2Service;
     try {
       const toDelete = pictures[selectedIndex].clientItemIdHex;
-      await service.deleteSinglePicture(toDelete);
+      await (service as ApiV2Service).deleteSinglePicture(toDelete);
       useStore.setState({
         pictures: [...pictures.slice(0, selectedIndex), ...pictures.slice(selectedIndex + 1)],
       });
@@ -43,7 +44,7 @@ export const PhotosModal = ({ isOpen, onClose }: PhotosModalProps) => {
       void (async () => {
         useStore.setState({ isPicturesLoading: true });
         try {
-          const pics = await apiService().getPictures();
+          const pics = await service.getPictures();
           useStore.setState({ pictures: pics });
           setSelectedIndex(pics.length - 1);
         } catch (err) {
@@ -53,7 +54,7 @@ export const PhotosModal = ({ isOpen, onClose }: PhotosModalProps) => {
         }
       })();
     }
-  }, [isOpen, userData]);
+  }, [isOpen, userData, service]);
 
   // Left/right navigation with arrow keys
   useEffect(() => {
@@ -91,7 +92,7 @@ export const PhotosModal = ({ isOpen, onClose }: PhotosModalProps) => {
 
           {!isPicturesLoading && pictures.length > 0 && (
             <div className="flex flex-col gap-8">
-              {apiService() instanceof ApiV2Service && (
+              {service instanceof ApiV2Service && (
                 <Button
                   variant="destructive"
                   size="sm"

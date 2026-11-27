@@ -1,3 +1,4 @@
+import type { BaseApiService } from '@/lib/api';
 import { apiService } from '@/lib/apiService';
 import { ApiV2Service } from '@/lib/apiv2';
 import { useStore } from '@/lib/store';
@@ -79,48 +80,26 @@ interface ActionGroupData {
   actions: ActionData[];
 }
 
-export const DevicePanel = ({ onLocateCommand, onViewPhotos }: DevicePanelProps) => {
-  const {
-    userData,
-    locations,
-    isLocationsLoading,
-    pushUrl,
-    isPushUrlLoading,
-    currentLocationIndex,
-  } = useStore();
+interface DeviceCommandsProps extends DevicePanelProps {
+  api: BaseApiService;
+}
 
+// QuitFind: the command groups on their own, so that the owner dashboard can use them with the
+// session of one of its devices
+export const DeviceCommands = ({ api, onLocateCommand, onViewPhotos }: DeviceCommandsProps) => {
   const { t: tCommands } = useTranslation('commands');
   const { t: tDashboard } = useTranslation('dashboard');
-  const { t: tError } = useTranslation('errors');
   const [loading, setLoading] = useState(false);
   const [showFactoryResetConfirm, setShowFactoryResetConfirm] = useState(false);
   const [showLockMessageConfirm, setShowLockMessageConfirm] = useState(false);
 
-  useEffect(() => {
-    if (!userData) return;
-    const fetchPushUrl = async () => {
-      useStore.setState({ isPushUrlLoading: true });
-      try {
-        const url = await apiService().getPushUrl();
-        useStore.setState({ pushUrl: url });
-      } catch {
-        useStore.setState({ pushUrl: null });
-      } finally {
-        useStore.setState({ isPushUrlLoading: false });
-      }
-    };
-    void fetchPushUrl();
-  }, [userData]);
-
   const executeCommand = async (command: string, baseCommand: string | null = null) => {
-    if (!userData) return;
-
     setLoading(true);
     try {
       if (command.startsWith('locate') && onLocateCommand) {
         onLocateCommand();
       }
-      await apiService().sendCommand(command);
+      await api.sendCommand(command);
 
       // baseCommand is for handling commands such as "locate custom message"
       if (!baseCommand) {
@@ -342,6 +321,67 @@ export const DevicePanel = ({ onLocateCommand, onViewPhotos }: DevicePanelProps)
     groupDnd,
   ];
 
+  return (
+    <>
+      {actionGroups.map((group, groupIndex) => (
+        <div
+          key={groupIndex}
+          className="dark:border-fmd-dark-border dark:bg-fmd-dark rounded-lg border border-gray-200 bg-white"
+        >
+          <ActionGroup
+            title={group.title}
+            description={group.description}
+            icon={group.icon}
+            actions={group.actions}
+            disabled={loading}
+          />
+        </div>
+      ))}
+
+      <LockMessageModal
+        isOpen={showLockMessageConfirm}
+        onClose={() => setShowLockMessageConfirm(false)}
+        executeCommand={(cmd, base) => void executeCommand(cmd, base)}
+      />
+
+      <FactoryResetModal
+        isOpen={showFactoryResetConfirm}
+        onClose={() => setShowFactoryResetConfirm(false)}
+        executeCommand={(cmd, base) => void executeCommand(cmd, base)}
+      />
+    </>
+  );
+};
+
+export const DevicePanel = ({ onLocateCommand, onViewPhotos }: DevicePanelProps) => {
+  const {
+    userData,
+    locations,
+    isLocationsLoading,
+    pushUrl,
+    isPushUrlLoading,
+    currentLocationIndex,
+  } = useStore();
+
+  const { t: tDashboard } = useTranslation('dashboard');
+  const { t: tError } = useTranslation('errors');
+
+  useEffect(() => {
+    if (!userData) return;
+    const fetchPushUrl = async () => {
+      useStore.setState({ isPushUrlLoading: true });
+      try {
+        const url = await apiService().getPushUrl();
+        useStore.setState({ pushUrl: url });
+      } catch {
+        useStore.setState({ pushUrl: null });
+      } finally {
+        useStore.setState({ isPushUrlLoading: false });
+      }
+    };
+    void fetchPushUrl();
+  }, [userData]);
+
   const currentLocation = locations[currentLocationIndex]?.item;
 
   return (
@@ -455,33 +495,12 @@ export const DevicePanel = ({ onLocateCommand, onViewPhotos }: DevicePanelProps)
           </div>
         )}
 
-        {actionGroups.map((group, groupIndex) => (
-          <div
-            key={groupIndex}
-            className="dark:border-fmd-dark-border dark:bg-fmd-dark rounded-lg border border-gray-200 bg-white"
-          >
-            <ActionGroup
-              title={group.title}
-              description={group.description}
-              icon={group.icon}
-              actions={group.actions}
-              disabled={loading}
-            />
-          </div>
-        ))}
+        <DeviceCommands
+          api={apiService()}
+          onViewPhotos={onViewPhotos}
+          onLocateCommand={onLocateCommand}
+        />
       </div>
-
-      <LockMessageModal
-        isOpen={showLockMessageConfirm}
-        onClose={() => setShowLockMessageConfirm(false)}
-        executeCommand={(cmd, base) => void executeCommand(cmd, base)}
-      />
-
-      <FactoryResetModal
-        isOpen={showFactoryResetConfirm}
-        onClose={() => setShowFactoryResetConfirm(false)}
-        executeCommand={(cmd, base) => void executeCommand(cmd, base)}
-      />
     </div>
   );
 };

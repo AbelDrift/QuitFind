@@ -18,7 +18,10 @@ export interface Location {
   accuracy?: number;
   altitude?: number;
   speed?: number;
-  bearing?: number;
+  heading?: number; // what FMD Android writes
+  bearing?: number; // what this web used to read
+  seenBy?: string; // QuitFind tag sighting: account name of the reporting device
+  rssi?: number;
 }
 
 export interface Picture {
@@ -69,15 +72,18 @@ export class ApiError extends Error {
   }
 }
 
+// QuitFind: pass `sessionToken` ('' = none) for requests of another account than the logged-in one
+// (devices in the owner dashboard). A 401 then only throws, it does not log the owner out.
 export const requestV2 = async <T>(
   method: string,
   endpoint: string,
-  body: object | null = null
+  body: object | null = null,
+  sessionToken?: string
 ) => {
   let headers: HeadersInit = { ...JSON_HEADER }; // create a fresh object
 
   const { userData } = useStore.getState();
-  const token = userData?.sessionToken;
+  const token = sessionToken ?? userData?.sessionToken;
 
   // Token can sometimes be null, e.g., during getSalt() and login()
   if (token) {
@@ -93,7 +99,7 @@ export const requestV2 = async <T>(
   if (!response.ok) {
     const text = await response.text();
 
-    if (response.status === 401) {
+    if (response.status === 401 && sessionToken === undefined) {
       void useStore.getState().logout();
       throw new ApiError('Session expired', response.status);
     }

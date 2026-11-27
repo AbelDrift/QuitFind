@@ -43,6 +43,9 @@ de sleutel nooit samenvalt met die van upstream-typen.
   128 MiB Argon2 te draaien: `K_auth = HKDF(K_pwk, "fmd_v2_auth" || SHA256(naam))`,
   `K_pmk = HKDF(K_pwk, "fmd_v2_premaster" || SHA256(naam))`.
 - `tag` alleen bij tags: hoe de tag via Bluetooth te herkennen is.
+- Weigert de server een login met een opgeslagen `pwk64` (403; of 404/423), probeer dan niet
+  steeds opnieuw: na 7 mislukte logins blokkeert de server het account 10 minuten, ook voor het
+  apparaat zelf. Meestal is het wachtwoord op het apparaat gewijzigd: opnieuw koppelen.
 
 Daarnaast hoogstens één item met `"kind": "settings"`, bijvoorbeeld met de
 `registrationToken` van de server (nodig om tag-accounts aan te maken).

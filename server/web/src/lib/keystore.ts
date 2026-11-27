@@ -17,6 +17,7 @@ export interface CryptoKeysV2 {
   cmdKek: CryptoKey;
   locationKek: CryptoKey;
   pictureKek: CryptoKey;
+  deviceKek: CryptoKey; // QuitFind: device register of an owner account
 }
 
 function openDB(): Promise<IDBDatabase> {

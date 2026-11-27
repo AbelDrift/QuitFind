@@ -18,5 +18,51 @@
   "accuracy": "Nauwkeurigheid",
   "altitude": "Hoogte",
   "speed": "Snelheid",
-  "bearing": "Koers"
+  "bearing": "Koers",
+  "owner": {
+    "add_device": "Apparaat toevoegen",
+    "add_device_description": "Koppel een bestaand FMD-account (protocol v2), bijvoorbeeld dat van je telefoon. Het wachtwoord wordt één keer gebruikt: je register bewaart alleen de sleutel die eruit volgt, versleuteld.",
+    "add_tag": "Tag toevoegen",
+    "add_tag_description": "Maakt een nieuw account aan voor een Bluetooth-tag. Je telefoons en laptops melden waar ze hem zien.",
+    "edit": "Bewerken",
+    "remove": "Verwijderen",
+    "remove_title": "{{name}} uit het register verwijderen?",
+    "remove_message": "Het account en zijn gegevens blijven op de server. Je kunt het later opnieuw koppelen met het wachtwoord.",
+    "remove_tag_message": "Het tag-account blijft op de server, maar het wachtwoord is willekeurig: na verwijderen kan niemand er nog bij.",
+    "refresh": "Vernieuwen",
+    "empty_hint": "Voeg een apparaat of tag toe om het op de kaart te zien.",
+    "name": "Naam",
+    "type": "Soort",
+    "tag_kind": "Soort Bluetooth-tag",
+    "tag_id": "Bluetooth-ID (bijv. AA:BB:CC:DD:EE:FF)",
+    "registration_token": "Registratietoken van de server",
+    "registration_token_hint": "Eén keer nodig om tag-accounts aan te maken; daarna staat het versleuteld in je register. Leeg laten als de server er geen heeft.",
+    "busy": "Bezig…",
+    "never_seen": "nog niet gezien",
+    "seen_by": "gezien door {{name}}",
+    "track_points_one": "{{count}} locatie in deze periode",
+    "track_points_other": "{{count}} locaties in deze periode",
+    "wrong_password": "Verkeerd wachtwoord",
+    "key_rejected": "De opgeslagen sleutel wordt geweigerd (wachtwoord gewijzigd?). Verwijder het apparaat en koppel het opnieuw.",
+    "already_linked": "Dit account staat al in je register",
+    "v1_account": "Dit account gebruikt nog protocol v1. Migreer het eerst in FMD Android.",
+    "range": {
+      "day": "24 uur",
+      "week": "7 dagen",
+      "all": "Alles"
+    },
+    "types": {
+      "phone": "Telefoon",
+      "tablet": "Tablet",
+      "laptop": "Laptop",
+      "pc": "Pc",
+      "tag": "Tag"
+    },
+    "tag_kinds": {
+      "mac": "MAC-adres",
+      "ibeacon": "iBeacon",
+      "eddystone": "Eddystone",
+      "fmdn": "FMDN"
+    }
+  }
 }

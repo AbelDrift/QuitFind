@@ -55,6 +55,50 @@
   + `docker run --network none quitfind-server:builder go test ./user/ ./backend/`.
 - Node-client tests/quitfind_v2.mjs + e2e tests/e2e_register.mjs (alleen tegen :8096; ruimt op).
 - 2026-11-27 07:27: image met datatype device gebouwd, Go-tests ok (user, backend); testserver herstart; e2e_register.mjs SLAAGT (4 accounts, register, tagwaarneming via telefoon, verse client ziet alles, manipulatie geweigerd, opgeruimd). Workflow quitfind-dashboard (run wf_48eeefa5-91f): bouwer → 3 reviewers → verificatie → hersteller. Hervatten: Workflow scriptPath ~/.claude/projects/-home-abel-claude-algemeen/63eeee7a-6517-415a-ba3c-8a163a78d5ff/workflows/scripts/quitfind-dashboard-wf_48eeefa5-91f.js + resumeFromRunId wf_48eeefa5-91f.
+- 2026-11-27 12:55: WEB-DASHBOARD (bouwer van wf_48eeefa5-91f) KLAAR EN GETEST, nog niet gecommit.
+  - Na inloggen leest Home het register (GET api/v2/data/device, lib/owner.ts loadRegister). Met items
+    (ook alleen het settings-item) → OwnerDashboard: één kaart met de laatste locatie per apparaat
+    (icoon per soort, naam als label; tag-label onder de pin), lijst (naam, soort, laatst gezien,
+    batterij, provider, "gezien door <naam>"), gekozen apparaat → spoor op datum + filter 24 uur/
+    7 dagen/alles, opdrachten via DeviceCommands met de sessie van dat apparaat (niet bij tags).
+    Beheer (modals/DeviceDialog.tsx): Apparaat toevoegen (Argon2 1×, inlogcontrole, pwk64 bewaren),
+    Tag toevoegen (account t-<16 hex>, willekeurig wachtwoord, token uit settings-item of 1× vragen),
+    bewerken (nieuw item, oude weg), verwijderen (alleen uit register). Gewone accounts: ongewijzigd.
+    Inlogpagina: "Nieuw eigenaar-account" (registratie in de browser + settings-item met token).
+  - Code: server/web/src/lib/owner.ts (register, sessies, beheer), lib/hashWorker.ts (gedeelde
+    Argon2-worker), apiv2.ts (loginV2, ApiV2Service met sessie per apparaat, 401 → opnieuw inloggen),
+    cryptov2.ts (K_kek_device, encryptNewMasterKey), api.ts (requestV2 met eigen token, 401 logt de
+    eigenaar dan niet uit), components/OwnerDashboard.tsx, DevicesMap.tsx, DevicePanel.tsx
+    (DeviceCommands los), PhotosModal (optioneel api), Home, LoginForm; teksten nl+en.
+    pwk's alleen in het geheugen; deviceKek niet-exporteerbaar (ook in IndexedDB); oude opgeslagen
+    sleutels zonder deviceKek → eenmalig opnieuw inloggen.
+  - Upstream-bugs opgelost: heading ?? bearing (popup + export), LocationMap index-guard, export met
+    loc.date i.p.v. loc.time.
+  - INLOG-BLOKKADE: de server blokkeert een account 10 min na 7 mislukte logins. Het dashboard
+    probeert een apparaat-login na 403/404/423 niet opnieuw (melding "sleutel geweigerd ... opnieuw
+    koppelen"). Android/desktop moeten dat ook doen (staat in docs/apparatenregister.md).
+  - Bouwen: cd server/web && systemd-run --user --scope -q -p MemoryMax=2500M -p MemorySwapMax=0
+    nice -n 10 npx --offline corepack pnpm run build (tsc + vite; corepack staat niet globaal, npx
+    haalt hem uit de cache). ESLint draait NIET: typescript-eslint 8.72 weigert TypeScript 7.0
+    (upstream-probleem, ook zonder deze wijziging); prettier --check op de gewijzigde bestanden ok.
+  - UI testen zonder het Go-image te herbouwen: override tests/web/docker-compose.web.yml
+    (FMD_WEBDIR=/srv/web + server/web/dist read-only gemount; test-instance/ staat in .gitignore,
+    daarom in tests/web). De testcontainer quitfind-test draait nu zo en serveert steeds de verse
+    dist (overleeft herbouwen). Terug naar de ingebouwde UI: docker compose -f
+    test-instance/docker-compose.yml up -d. De echte FMD (:8090/:8443) is niet aangeraakt.
+  - Browsertest: tests/web/run_dashboard_browser.sh (zet de override aan, headless Firefox onder
+    MemoryMax=2500M, BiDi-poort 9334, UI in het Nederlands; screenshot met SHOT_DIR=map) →
+    tests/web/dashboard_browser.mjs: GESLAAGD (3 namen, 3 markers, "gezien door", spoor+filter,
+    opdracht met sleutel van de telefoon, tag toevoegen/bewerken/verwijderen, verouderde sleutel niet
+    herhaald, eigenaar-account aangemaakt in de browser en door Node ingelogd, gewoon account →
+    enkel-apparaatweergave; alles opgeruimd). Mutatiecheck: zonder de blokkade-fix faalt hij (423).
+    tests/e2e_register.mjs slaagt nog (quitfind_v2.mjs kreeg decRaw voor opdrachten).
+  - Open: (1) het Go-image bevat nog de oude ingebouwde UI → docker build nodig vóór gebruik zonder
+    override; (2) "Account verwijderen" in Instellingen verwijdert bij een eigenaar alleen het
+    eigenaar-account: apparaat-accounts blijven, tag-accounts worden onbereikbaar (geen waarschuwing);
+    (3) tag uit register verwijderen laat het tag-account onbereikbaar op de server staan (besluit
+    Abel: account dan ook verwijderen?); (4) andere talen dan nl/en tonen de nieuwe teksten in het
+    Engels; (5) pinnen dicht op elkaar overlappen nog deels (geen clustering).
 
 ## Onderzoeksuitkomsten (workflow wf_bb5605f6-552; volledige rapporten in ~/.claude/projects/-home-abel-claude-algemeen/63eeee7a-6517-415a-ba3c-8a163a78d5ff/subagents/workflows/wf_bb5605f6-552/journal.jsonl)
 Architect-stap mislukte (gebruikslimiet; maandelijkse bestedingslimiet bereikt; onderzoek kostte ~4 mln tokens) → plan door hoofdsessie.
@@ -76,3 +120,22 @@ Architect-stap mislukte (gebruikslimiet; maandelijkse bestedingslimiet bereikt; 
   (~/ontwikkeling/quitfind-sleutel); serveradres buiten de bron (bij bouwen ingeven); geheimen-check vóór commit (nu ingebouwd).
 - PRIVACY: Tailscale-hostnaam stond in CLAUDE.md (openbaar, sinds e7322dd). Nu vervangen; echte adressen in LOKAAL.md (genegeerd).
   Staat nog in de git-geschiedenis: herschrijven is Abels keuze (alleen bereikbaar binnen de tailnet).
+- 2026-11-27 (avond): DASHBOARD GEBOUWD (workflow wf_48eeefa5-91f, bouwer): eigenaar-modus (register → alle apparaten op één
+  kaart met icoon per soort, lijst met laatst gezien/batterij/provider/"gezien door", spoor + filter 24u/7d/alles, opdrachten per
+  apparaat), apparaat koppelen, tag toevoegen/bewerken/verwijderen, nieuw eigenaar-account op de inlogpagina, upstream-fixes
+  (heading??bearing, index-guard, export loc.date), lockout-bescherming (geen herhaalde login na 403/404/423).
+  Tests: pnpm build ok; tests/web/run_dashboard_browser.sh (headless Firefox, ruimt op) ok; e2e_register ok.
+  Testserver serveert server/web/dist via tests/web/docker-compose.web.yml (terug: docker compose -f test-instance/docker-compose.yml up -d).
+  Kosten: dashboard-workflow ~3,6 mln tokens, onderzoek ~4 mln; maandelijkse bestedingslimiet bereikt, week 80% (27 nov).
+  OPEN REVIEWPUNTEN (bevestigd = B, onbevestigd = ?):
+  B medium OwnerDashboard.tsx:60/:? één misvormde (ontsleutelde) locatie laat het hele dashboard crashen → velden valideren
+  B medium PhotosModal.tsx:47 foto's van apparaat A verschijnen bij B (gedeelde store-pictures, late antwoorden)
+  B medium Home.tsx:153 instellingen in eigenaar-modus wissen/exporteren alleen het lege eigenaar-account maar melden succes
+  B low/med owner.ts:113 blokkadebescherming alleen per paginasessie (herladen telt opnieuw); 423 als blijvend behandeld
+  B low dashboard_browser.mjs:150 test ruimt browser-accounts niet op bij falen halverwege
+  ? medium DevicesMap.tsx:157 kaart kent krimpende container niet (<1024px spoor buiten beeld) → invalidateSize/ResizeObserver
+  ? low owner.ts:169 mislukte eerste registerlezing → stil enkel-apparaatweergave; owner.ts:319 beheer herlaadt register niet na
+    halve mislukking; owner.ts:85 vastgelopen Argon2-worker; DevicesMap.tsx:87 kaartlaag steeds herbouwd (popups sluiten);
+    LoginForm.tsx:60 Engelse serverfouten; DeviceDialog.tsx:138 velden zonder zichtbaar label; OwnerDashboard.tsx:32 elke 60 s
+    volledige geschiedenis van elk apparaat ophalen.
+  Weerlegd: owner.ts:110 (veld server genegeerd: niemand schrijft het), OwnerDashboard.tsx:60 (variant zonder schrijver).

@@ -49,11 +49,12 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
 
       for (const locItem of locations) {
         const loc = locItem.item;
-        const date = new Date(loc.time).toISOString();
+        // "date" is milliseconds; "time" is a Java Date string that JS cannot always parse
+        const date = new Date(loc.date).toISOString();
         const accuracy = loc.accuracy || '';
         const altitude = loc.altitude || '';
         const speed = loc.speed || '';
-        const bearing = loc.bearing || '';
+        const bearing = loc.heading ?? loc.bearing ?? '';
         locationsCSV += `${date},${loc.provider},${loc.bat},${loc.lat},${loc.lon},${accuracy},${altitude},${speed},${bearing}\n`;
       }
 

@@ -1,6 +1,16 @@
-import { BaseApiService, HTTP, Location, Item, ONE_WEEK_SECONDS, Picture, requestV2 } from './api';
+import {
+  ApiError,
+  BaseApiService,
+  HTTP,
+  Location,
+  Item,
+  ONE_WEEK_SECONDS,
+  Picture,
+  requestV2,
+} from './api';
 import { base64Encode } from './crypto';
 import {
+  DataBlobType,
   decryptDataV2,
   decryptMasterKey,
   deriveAuthKeyAndPreMasterKey,
@@ -10,7 +20,7 @@ import {
 import { CryptoKeysV2 } from './keystore';
 import { UserData, useStore } from './store';
 
-const API_BASE = 'api/v2';
+export const API_BASE = 'api/v2';
 
 interface SaltResponse {
   salt64: string;
@@ -42,7 +52,88 @@ interface EncryptedItem {
   ciphertext64: string;
 }
 
+/**
+ * QuitFind: the session of one device in the owner dashboard (see lib/owner.ts).
+ * get(stale) logs in again when the server rejected the session `stale`.
+ */
+export interface DeviceSession {
+  get(stale?: UserData): Promise<UserData>;
+}
+
+/**
+ * Logs in with the password key K_pwk (from Argon2, or stored in the device register)
+ * and derives all keys. `sessionToken` as in requestV2 ('' = log in as another account).
+ */
+export async function loginV2(
+  username: string,
+  // This is K_pwk, not K_auth!
+  passwordHash: Uint8Array<ArrayBuffer>,
+  sessionDurationSeconds: number,
+  sessionToken?: string
+): Promise<UserData> {
+  const [authKey, preMasterKey] = await deriveAuthKeyAndPreMasterKey(username, passwordHash.buffer);
+
+  // Get access token and encrypted master key
+  const requestBody: LoginRequest = {
+    username,
+    passwordHash64: base64Encode(authKey),
+    sessionDurationSeconds,
+  };
+  const response = await requestV2<LoginResponse>(
+    HTTP.POST,
+    `${API_BASE}/account/login`,
+    requestBody,
+    sessionToken
+  );
+
+  // Decrypt the master key and derive the KEKs from it
+  const [masterKey, fingerprint] = await decryptMasterKey(
+    username,
+    preMasterKey,
+    response.encMasterKey64
+  );
+  const [cmdKek, locationKek, pictureKek, deviceKek] = await deriveKeks(username, masterKey);
+
+  const keysV2: CryptoKeysV2 = {
+    // masterKey,
+    cmdKek,
+    locationKek,
+    pictureKek,
+    deviceKek,
+  };
+
+  return {
+    fmdId: username,
+    sessionToken: response.accessToken,
+    fingerprint,
+    keysV2,
+    keysV1: null,
+  };
+}
+
 export class ApiV2Service extends BaseApiService {
+  // QuitFind: without a session, this is the logged-in account (as upstream)
+  constructor(private readonly session?: DeviceSession) {
+    super();
+  }
+
+  private async user(): Promise<UserData> {
+    return this.session ? this.session.get() : useStore.getState().userData!;
+  }
+
+  private async request<T>(method: string, endpoint: string, body: object | null = null) {
+    if (!this.session) return requestV2<T>(method, endpoint, body);
+
+    const user = await this.session.get();
+    try {
+      return await requestV2<T>(method, endpoint, body, user.sessionToken);
+    } catch (error) {
+      if (!(error instanceof ApiError && error.status === 401)) throw error;
+      // Token expired or forgotten by a server restart: log in again (stored K_pwk) and retry once
+      return requestV2<T>(method, endpoint, body, (await this.session.get(user)).sessionToken);
+    }
+  }
+
   async getSalt(userName: string): Promise<[string, number]> {
     const response = await requestV2<SaltResponse>(
       HTTP.GET,
@@ -60,57 +151,19 @@ export class ApiV2Service extends BaseApiService {
   ): Promise<void> {
     const sessionDurationSeconds = rememberMe ? ONE_WEEK_SECONDS : 0;
 
-    const [authKey, preMasterKey] = await deriveAuthKeyAndPreMasterKey(
-      username,
-      passwordHash.buffer
-    );
-
-    // Get access token and encrypted master key
-    const requestBody: LoginRequest = {
-      username,
-      passwordHash64: base64Encode(authKey),
-      sessionDurationSeconds,
-    };
-    const response = await requestV2<LoginResponse>(
-      HTTP.POST,
-      `${API_BASE}/account/login`,
-      requestBody
-    );
-    const sessionToken = response.accessToken;
-
-    // Decrypt the master key and derive the KEKs from it
-    const [masterKey, fingerprint] = await decryptMasterKey(
-      username,
-      preMasterKey,
-      response.encMasterKey64
-    );
-    const [cmdKek, locationKek, pictureKek] = await deriveKeks(username, masterKey);
+    const data = await loginV2(username, passwordHash, sessionDurationSeconds);
 
     // Store everything
     const { setUserData } = useStore.getState();
-    const keysV2: CryptoKeysV2 = {
-      // masterKey,
-      cmdKek,
-      locationKek,
-      pictureKek,
-    };
-
-    const data: UserData = {
-      fmdId: username,
-      sessionToken,
-      fingerprint,
-      keysV2,
-      keysV1: null,
-    };
     await setUserData(data, rememberMe);
   }
 
   async logout(): Promise<void> {
-    await requestV2(HTTP.POST, `${API_BASE}/account/logout`);
+    await this.request(HTTP.POST, `${API_BASE}/account/logout`);
   }
 
   async getPushUrl(): Promise<string> {
-    const response = await requestV2<PushUrlRequestResponse>(
+    const response = await this.request<PushUrlRequestResponse>(
       HTTP.GET,
       `${API_BASE}/account/push_url`
     );
@@ -118,126 +171,110 @@ export class ApiV2Service extends BaseApiService {
   }
 
   async deleteAccount(): Promise<void> {
-    await requestV2(HTTP.DELETE, `${API_BASE}/account`);
+    await this.request(HTTP.DELETE, `${API_BASE}/account`);
   }
 
   async sendCommand(command: string): Promise<void> {
-    const { userData } = useStore.getState();
-
-    // Encrypt command
-    const [clientItemIdHex, unixMillis, ciphertext64] = await encryptDataV2(
-      userData!.fmdId,
-      userData!.keysV2!.cmdKek,
-      'command',
-      new TextEncoder().encode(command)
-    );
-
-    // Send to the server
-    const bodyObj: DataRequestResponse = {
-      items: [{ clientItemIdHex, unixMillis, ciphertext64 }],
-    };
-
-    await requestV2(HTTP.POST, `${API_BASE}/data/command`, bodyObj);
+    await this.postItem('command', (k) => k.cmdKek, new TextEncoder().encode(command));
   }
 
-  async getLocations(): Promise<Item<Location>[]> {
-    const { userData } = useStore.getState();
-
-    // Get the locations
-    const encryptedLocations = await requestV2<DataRequestResponse>(
-      HTTP.GET,
-      `${API_BASE}/data/location`
-    );
-
-    // Decrypt them
-    const decryptedLocations: Item<Location>[] = [];
-    const decoder = new TextDecoder();
-
-    for (var it of encryptedLocations.items) {
-      let decrypted;
-      try {
-        decrypted = await decryptDataV2(
-          userData!.fmdId,
-          userData!.keysV2!.locationKek,
-          'location',
-          it.clientItemIdHex,
-          it.unixMillis,
-          it.ciphertext64
-        );
-      } catch {
-        console.log(`Failed to decrypt location ${it.clientItemIdHex}`);
-        continue;
-      }
-      const loc = JSON.parse(decoder.decode(decrypted)) as Location;
-      const item: Item<Location> = {
-        clientItemIdHex: it.clientItemIdHex,
-        unixMillis: it.unixMillis,
-        item: loc,
-      };
-      decryptedLocations.push(item);
-    }
-
-    return decryptedLocations;
+  getLocations(): Promise<Item<Location>[]> {
+    return this.getItems<Location>('location', (k) => k.locationKek);
   }
 
   async getPictures(): Promise<Item<string>[]> {
-    const { userData } = useStore.getState();
+    const pictures = await this.getItems<Picture>('picture', (k) => k.pictureKek);
+    return pictures.map((p) => ({ ...p, item: p.item.raw64 }));
+  }
 
-    // Get the pictures
-    const encryptedPictures = await requestV2<DataRequestResponse>(
-      HTTP.GET,
-      `${API_BASE}/data/picture`
-    );
+  // QuitFind: the device register of an owner account (docs/apparatenregister.md)
+  getDeviceItems<T>(): Promise<Item<T>[]> {
+    return this.getItems<T>('device', (k) => k.deviceKek);
+  }
 
-    // Decrypt them
-    const decryptedPictures: Item<string>[] = [];
+  addDeviceItem(item: object): Promise<string> {
+    const data = new TextEncoder().encode(JSON.stringify(item));
+    return this.postItem('device', (k) => k.deviceKek, data);
+  }
+
+  async deleteDeviceItem(clientItemIdHex: string): Promise<void> {
+    await this.request(HTTP.DELETE, `${API_BASE}/data/device/${clientItemIdHex}`);
+  }
+
+  // Get and decrypt all items of one type. Items that fail to decrypt are skipped.
+  private async getItems<T>(
+    type: DataBlobType,
+    kek: (keys: CryptoKeysV2) => CryptoKey
+  ): Promise<Item<T>[]> {
+    const user = await this.user();
+    const encrypted = await this.request<DataRequestResponse>(HTTP.GET, `${API_BASE}/data/${type}`);
+
+    const decrypted: Item<T>[] = [];
     const decoder = new TextDecoder();
 
-    for (var it of encryptedPictures.items) {
-      let decrypted;
+    for (const it of encrypted.items) {
       try {
-        decrypted = await decryptDataV2(
-          userData!.fmdId,
-          userData!.keysV2!.pictureKek,
-          'picture',
+        const bytes = await decryptDataV2(
+          user.fmdId,
+          kek(user.keysV2!),
+          type,
           it.clientItemIdHex,
           it.unixMillis,
           it.ciphertext64
         );
+        decrypted.push({
+          clientItemIdHex: it.clientItemIdHex,
+          unixMillis: it.unixMillis,
+          item: JSON.parse(decoder.decode(bytes)) as T,
+        });
       } catch {
-        console.log(`Failed to decrypt picture ${it.clientItemIdHex}`);
-        continue;
+        console.log(`Failed to decrypt ${type} ${it.clientItemIdHex}`);
       }
-      const obj = JSON.parse(decoder.decode(decrypted)) as Picture;
-      const item: Item<string> = {
-        clientItemIdHex: it.clientItemIdHex,
-        unixMillis: it.unixMillis,
-        item: obj.raw64,
-      };
-      decryptedPictures.push(item);
     }
 
-    return decryptedPictures;
+    return decrypted;
+  }
+
+  // Encrypt one item and send it to the server. Returns its clientItemIdHex.
+  private async postItem(
+    type: DataBlobType,
+    kek: (keys: CryptoKeysV2) => CryptoKey,
+    data: Uint8Array<ArrayBuffer>
+  ): Promise<string> {
+    const user = await this.user();
+
+    const [clientItemIdHex, unixMillis, ciphertext64] = await encryptDataV2(
+      user.fmdId,
+      kek(user.keysV2!),
+      type,
+      data
+    );
+
+    const bodyObj: DataRequestResponse = {
+      items: [{ clientItemIdHex, unixMillis, ciphertext64 }],
+    };
+    await this.request(HTTP.POST, `${API_BASE}/data/${type}`, bodyObj);
+    return clientItemIdHex;
   }
 
   async deleteAllCommands(): Promise<void> {
-    await requestV2(HTTP.DELETE, `${API_BASE}/data/command/all`);
+    await this.request(HTTP.DELETE, `${API_BASE}/data/command/all`);
   }
 
   async deleteAllLocations(): Promise<void> {
-    await requestV2(HTTP.DELETE, `${API_BASE}/data/location/all`);
+    await this.request(HTTP.DELETE, `${API_BASE}/data/location/all`);
   }
 
   async deleteAllPictures(): Promise<void> {
-    await requestV2(HTTP.DELETE, `${API_BASE}/data/picture/all`);
+    await this.request(HTTP.DELETE, `${API_BASE}/data/picture/all`);
   }
 
   async deleteSingleLocation(clientItemIdHex: string): Promise<void> {
-    await requestV2(HTTP.DELETE, `${API_BASE}/data/location/${clientItemIdHex}`);
+    await this.request(HTTP.DELETE, `${API_BASE}/data/location/${clientItemIdHex}`);
   }
 
   async deleteSinglePicture(clientItemIdHex: string): Promise<void> {
-    await requestV2(HTTP.DELETE, `${API_BASE}/data/picture/${clientItemIdHex}`);
+    await this.request(HTTP.DELETE, `${API_BASE}/data/picture/${clientItemIdHex}`);
   }
 
   async getTileServerUrl(): Promise<string> {

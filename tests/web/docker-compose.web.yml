@@ -1,0 +1,12 @@
+# Override for the TEST server (test-instance/, never the real FMD): serve the web UI from
+# server/web/dist (read-only bind mount, FMD_WEBDIR) instead of the copy embedded in the image,
+# so UI changes can be tested without rebuilding the Go image. From the repo root:
+#   docker compose -f test-instance/docker-compose.yml -f tests/web/docker-compose.web.yml up -d
+# Relative paths count from test-instance/ (the first -f file). Back to the embedded UI:
+#   docker compose -f test-instance/docker-compose.yml up -d
+services:
+  quitfind-test:
+    environment:
+      FMD_WEBDIR: /srv/web
+    volumes:
+      - ../server/web/dist/:/srv/web/:ro

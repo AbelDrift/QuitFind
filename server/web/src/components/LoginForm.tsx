@@ -6,6 +6,8 @@ import { Link } from 'react-router-dom';
 import { ApiError, getVersion } from '@/lib/api';
 import { apiService } from '@/lib/apiService';
 import { hashPasswordForLogin, PasswordHashResult } from '@/lib/crypto';
+import { hashPasswordInWorker } from '@/lib/hashWorker';
+import { createOwnerAccount } from '@/lib/owner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/PasswordInput';
@@ -26,6 +28,10 @@ export const LoginForm = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [version, setVersion] = useState('');
+  // QuitFind: 'register' creates a new owner account (device register, dashboard)
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [password2, setPassword2] = useState('');
+  const [registrationToken, setRegistrationToken] = useState('');
 
   useEffect(() => {
     void (async () => {
@@ -38,30 +44,25 @@ export const LoginForm = () => {
     })();
   }, []);
 
-  // Hash the password on a Web Worker background thread
-  const hashPasswordInWorker = (
-    protoVersion: number,
-    username: string,
-    password: string,
-    salt64: string
-  ): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const worker = new Worker(new URL('../workers/passwordHashing.ts', import.meta.url), {
-        type: 'module',
-      });
-
-      worker.onmessage = (ev) => {
-        resolve(ev.data as string);
-        worker.terminate();
-      };
-
-      worker.onerror = (err) => {
-        reject(new Error(err.message));
-        worker.terminate();
-      };
-
-      worker.postMessage([protoVersion, username, password, salt64]);
-    });
+  // QuitFind: create an owner account and log in to it
+  const handleRegister = async () => {
+    if (password !== password2) {
+      toast.error(t('register.password_mismatch'));
+      return;
+    }
+    setLoading(true);
+    try {
+      await createOwnerAccount(fmdId, password, registrationToken.trim(), rememberMe);
+    } catch (error) {
+      if (error instanceof ApiError && error.status == 401) {
+        toast.error(t('register.bad_token'));
+      } else {
+        toast.error(error instanceof Error ? error.message : t('register.failed'));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Send the login request
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,13 +140,21 @@ export const LoginForm = () => {
           </p>
 
           {/* https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/autocomplete */}
-          <form onSubmit={(e) => void handleSubmit(e)} className="space-y-6">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void (mode === 'login' ? handleSubmit(e) : handleRegister());
+            }}
+            className="space-y-6"
+          >
             <Input
               type="text"
               value={fmdId}
               onChange={(e) => setFmdId(e.target.value)}
               placeholder={t('username_placeholder')}
               autoComplete="username"
+              pattern={mode === 'register' ? '[\\-_a-zA-Z0-9]{1,64}' : undefined}
+              title={mode === 'register' ? t('register.username_hint') : undefined}
               required
             />
 
@@ -153,9 +162,29 @@ export const LoginForm = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={t('password_placeholder')}
-              autoComplete="current-password"
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'} /* geheimen-check: ok */
               required
             />
+
+            {mode === 'register' && (
+              <>
+                <PasswordInput
+                  value={password2}
+                  onChange={(e) => setPassword2(e.target.value)}
+                  placeholder={t('register.password_repeat')}
+                  autoComplete="new-password"
+                  required
+                />
+                <Input
+                  id="registration-token"
+                  value={registrationToken}
+                  onChange={(e) => setRegistrationToken(e.target.value)}
+                  placeholder={t('register.token_placeholder')}
+                  autoComplete="off"
+                />
+                <p className="text-xs text-gray-600 dark:text-gray-400">{t('register.hint')}</p>
+              </>
+            )}
 
             <Checkbox
               id="rememberMe"
@@ -165,9 +194,26 @@ export const LoginForm = () => {
             />
 
             <Button type="submit" disabled={loading} size="lg" className="w-full text-lg">
-              {loading ? t('logging_in') : t('log_in')}
+              {mode === 'register'
+                ? loading
+                  ? t('register.creating')
+                  : t('register.create')
+                : loading
+                  ? t('logging_in')
+                  : t('log_in')}
             </Button>
           </form>
+
+          <Button
+            id="toggle-register"
+            type="button"
+            variant="link"
+            className="mt-4 w-full"
+            disabled={loading}
+            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+          >
+            {mode === 'login' ? t('register.switch') : t('register.back')}
+          </Button>
 
           <WebCryptoWarningModal />
         </div>
