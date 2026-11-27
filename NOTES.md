@@ -153,3 +153,17 @@ Architect-stap mislukte (gebruikslimiet; maandelijkse bestedingslimiet bereikt; 
 - 2026-11-27 (avond): dashboard low-punten: kaart volgt containergrootte (ResizeObserver → invalidateSize), tijdelijke fout bij eerste registerlezing → tot 3× opnieuw i.p.v. stil enkel-apparaatweergave (oude server zonder 'device' → wel enkelweergave), Argon2-worker na 2 min afgebroken, zichtbare labels bij alle velden in het apparaatdialoog. Build + browsertest groen. LET OP: image quitfind-server:dev bevat nog de web-versie van vóór deze punten + Google-brug-instelling → opnieuw bouwen vóór gebruik (cd server && docker build -t quitfind-server:dev .). Nog open (low): kaartlaag herbouwd bij elke wijziging (popups sluiten), Engelse serverfouten in NL-UI, 60 s volledige geschiedenis ophalen.
 - 2026-11-27 (avond): QuitFind-icoon (QuitSuite-stijl: navy #17324D tegel, witte locatiespeld, oranje #FFB547 tag-stip): Android adaptief icoon (vector, main/dev/edge), web icon.svg + PNG-favicons (ImageMagick) + titel/manifest 'QuitFind'. Android build OK. Image moet nog één keer opnieuw (web-labels + icoon).
 - 2026-11-27 (avond): android/bouwen.sh (debug/release, --installeren, serveradres uit ~/.config/quitfind/adres → -PquitfindServer) + android/sleutel-maken.sh (sleutel in ~/ontwikkeling/quitfind-sleutel, key.properties genegeerd) + signingConfig in app/build.gradle. Release-proefbouw met TIJDELIJKE sleutel: R8 OK, APK ondertekend (CN=QuitFind-proef), proefsleutel weer verwijderd. Echte sleutel NIET gemaakt (Abels keuze + back-up). Image opnieuw gebouwd (web met labels/icoon/Google-brug); testserver draait erop (titel QuitFind).
+
+## STAND 27 nov 2026 (eind van de sessie) — hier verder lezen
+Eerste complete versie, alles gepusht (laatste commit: zie git log). Alle tests groen:
+`node tests/fmd_v2_vectors.mjs`, `node tests/e2e_register.mjs`, `node tests/bridge_ingest.mjs`, `node tests/desktop_sync.mjs`,
+`tests/web/run_dashboard_browser.sh`, Android `testDevDebugUnitTest --tests 'de.nulide.findmydevice.quitfind.*'` (8 tests),
+desktop `cargo test fmd::` (3). Testserver: `docker compose -f test-instance/docker-compose.yml up -d` (127.0.0.1:8096).
+KLAAR: server (+datatype device), webdashboard (+Google-brug-instelling, icoon), Android (kaarttab, tags zoeken MAC/iBeacon/
+Eddystone, icoon, bouwen.sh/sleutel-maken.sh), desktop (QuitFind-sync), Google-brug A-adapter (+LEESMIJ, compose-sjabloon).
+WACHT OP ABEL: (1) APK op de Fairphone testen (`android/bouwen.sh --installeren`), (2) echte server overzetten (back-up db!),
+(3) Google-brug A met reserve-account (eenmalige Chrome-login), (4) echte release-sleutel (`android/sleutel-maken.sh`),
+(5) Tailscale-hostnaam uit git-geschiedenis halen of niet.
+NOG TE DOEN (zelf): FMDN-tags lokaal herkennen met EIK (EID-berekening secp160r1; testvectoren nodig), Google-brug B (afgeraden),
+low-punten dashboard (popups sluiten bij herbouw kaartlaag, Engelse serverfouten in NL, 60 s volledige geschiedenis),
+desktop-UI visueel testen (geen Xvfb; niet op Abels scherm zonder vragen).
