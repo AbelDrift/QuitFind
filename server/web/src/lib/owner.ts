@@ -39,10 +39,15 @@ export interface DeviceEntry {
   addedAt: number;
 }
 
+// Google bridge (NOTES.md, phase 3b): off, A = through the server (bridge/google), B = a spare phone (not built yet)
+export const GOOGLE_BRIDGE = ['off', 'server', 'phone'] as const;
+export type GoogleBridge = (typeof GOOGLE_BRIDGE)[number];
+
 interface SettingsEntry {
   v: 1;
   kind: 'settings';
   registrationToken: string;
+  googleBridge?: GoogleBridge;
 }
 
 // A register item as stored on the server, with its clientItemIdHex
@@ -346,6 +351,21 @@ export async function addTag(
     await owner().addDeviceItem({ ...old, v: 1, kind: 'settings', registrationToken: token });
     if (settings) await owner().deleteDeviceItem(settings.id);
   }
+  await loadRegister();
+}
+
+// The bridge adapter (bridge/google/ingest.mjs) only stores locations while this is 'server'
+export async function setGoogleBridge(mode: GoogleBridge) {
+  const settings = registerSettings(useOwner.getState().items);
+  const old = settings ? strip(settings) : {};
+  await owner().addDeviceItem({
+    ...old,
+    v: 1,
+    kind: 'settings',
+    registrationToken: settings?.registrationToken ?? '',
+    googleBridge: mode,
+  });
+  if (settings) await owner().deleteDeviceItem(settings.id);
   await loadRegister();
 }
 

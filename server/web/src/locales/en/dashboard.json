@@ -71,5 +71,15 @@
       "fmdn": "Find Hub tag: works through the Google bridge"
     },
     "tag_id_invalid": "This Bluetooth ID does not have the right format for this kind of tag."
+  },
+  "bridge": {
+    "title": "Google bridge",
+    "explain": "Optional: fetch the locations of your Google Find Hub tags (such as Fresh 'n Rebel) from Google. This uses a (spare) Google account; Google may block such access.",
+    "off": "Off",
+    "server": "A: through the server (recommended)",
+    "phone": "B: through a spare phone (not available yet)",
+    "hint_server": "Start the bridge on the server (see bridge/google/LEESMIJ.md) and set the adapter address for each tag.",
+    "hint_phone": "This option is prepared but does not work yet. Use A for now.",
+    "saved": "Saved"
   }
 }

@@ -71,5 +71,15 @@
       "fmdn": "Find Hub-tag: werkt via de Google-brug"
     },
     "tag_id_invalid": "Dit Bluetooth-ID heeft niet de juiste vorm voor deze soort tag."
+  },
+  "bridge": {
+    "title": "Google-brug",
+    "explain": "Optioneel: de locaties van je Google Find Hub-tags (zoals Fresh 'n Rebel) via Google ophalen. Dit gebruikt een (reserve-)Google-account; Google kan zulke toegang blokkeren.",
+    "off": "Uit",
+    "server": "A: via de server (aanbevolen)",
+    "phone": "B: via een reservetelefoon (nog niet beschikbaar)",
+    "hint_server": "Start de brug op de server (zie bridge/google/LEESMIJ.md) en zet bij elke tag het adres van de adapter.",
+    "hint_phone": "Deze optie is voorbereid maar werkt nog niet. Kies voorlopig A.",
+    "saved": "Opgeslagen"
   }
 }

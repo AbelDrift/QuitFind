@@ -1,0 +1,33 @@
+# QuitFind Google-brug A: SJABLOON, nog niet gedraaid met een echt Google-account. Lees eerst LEESMIJ.md.
+# Niet automatisch starten; geheimen staan buiten git in ./geheim/ (zie .gitignore).
+services:
+  gfmt: # de Google-brug zelf (derde partij, GPL-3.0)
+    image: ghcr.io/p6g9yhk6/googlefindmytools:latest # VASTPINNEN op @sha256:… na nalezen (stap 4)
+    restart: unless-stopped
+    ports: ["127.0.0.1:4321:4321"] # web-UI alleen op deze pc, nooit via Tailscale
+    env_file: ./geheim/gfmt.env
+    volumes: ["./gfmt-data:/data"] # controleer het datapad in de README van het project
+    shm_size: 1gb # Chrome tijdens de eenmalige login
+    networks: [brug]
+
+  qf-ingest: # QuitFind-adapter (deze repo)
+    image: node:24-alpine
+    command: ["node", "/qf/bridge/google/ingest.mjs"]
+    restart: unless-stopped
+    environment:
+      QF_SERVER: http://quitfind:8080 # de QuitFind-server; zet hem in hetzelfde netwerk (of pas aan)
+      QF_OWNER: jouw-eigenaar-account
+      QF_OWNER_PWK64_FILE: /geheim/eigenaar-pwk64
+      QF_INGEST_KEY_FILE: /geheim/adapter-sleutel
+      QF_LISTEN: 0.0.0.0:5055 # alleen binnen het netwerk "brug"; geen poort naar buiten
+    volumes:
+      - ../../lib:/qf/lib:ro
+      - ./ingest.mjs:/qf/bridge/google/ingest.mjs:ro
+      - ./geheim:/geheim:ro
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges]
+    networks: [brug]
+
+networks:
+  brug: {}

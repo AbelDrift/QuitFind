@@ -8,6 +8,7 @@ import { apiService } from '@/lib/apiService';
 import { useStore, logout, type UnitSystem } from '@/lib/store';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { GoogleBridgeSetting } from '@/components/GoogleBridgeSetting';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
@@ -133,6 +134,8 @@ export const SettingsModal = ({ isOpen, onClose, ownerMode = false }: SettingsMo
               <h3 className="text-fmd-green mb-3 font-semibold">{t('language.title')}</h3>
               <LanguageNativeSelect />
             </div>
+
+            {ownerMode && <GoogleBridgeSetting />}
 
             <div>
               <h3 className="text-fmd-green mb-3 font-semibold">{t('account')}</h3>
