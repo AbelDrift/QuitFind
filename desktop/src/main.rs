@@ -1,4 +1,4 @@
-//! Open Find: a Google-free device finder for Linux desktops.
+//! QuitFind desktop: a Google-free device finder for Linux desktops (formerly Open Find).
 //! Bluetooth tags, beacons and Apple/Android devices are found by this computer's Bluetooth;
 //! phones and laptops report their own location over the local network.
 mod bt;
