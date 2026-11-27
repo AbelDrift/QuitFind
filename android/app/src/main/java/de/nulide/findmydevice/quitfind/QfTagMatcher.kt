@@ -3,8 +3,8 @@ package de.nulide.findmydevice.quitfind
 /**
  * QuitFind: recognise the owner's own Bluetooth tags in BLE advertisements.
  * Supported (fixed identity, no Google needed): MAC address (simple key finders), iBeacon and
- * Eddystone-UID. Google Find Hub tags (kind "fmdn") rotate their identity and need the tag's EIK;
- * they are not matched here (see NOTES.md, phase 3b).
+ * Eddystone-UID. Google Find Hub tags (kind "fmdn") rotate their identity: they are matched with the
+ * tag's EIK (QfFmdn).
  */
 object QfTagMatcher {
     const val APPLE_ID = 0x004C
@@ -35,11 +35,23 @@ object QfTagMatcher {
         if (eddystoneData != null && eddystoneData.size >= 18 && eddystoneData[0] == 0x00.toByte()) {
             ids += "eddystone:" + eddystoneData.copyOfRange(2, 18).toHexString()
         }
+        // Google Find Hub (FMDN): frame 0x40 (0x41 in unwanted-tracking mode), rotating EID(20), flags
+        if (eddystoneData != null && eddystoneData.size >= 21 && (eddystoneData[0].toInt() and 0xFE) == 0x40) {
+            ids += "fmdn:" + eddystoneData.copyOfRange(1, 21).toHexString()
+        }
         return ids
     }
 
-    fun match(tags: List<QfDevice>, seen: Set<String>): List<QfDevice> =
-        tags.filter { t -> identityOf(t.tagKind, t.tagId)?.let { it in seen } == true }
+    /** Can this register tag be recognised by a phone at all? */
+    fun canMatch(t: QfDevice) = identityOf(t.tagKind, t.tagId) != null || (t.tagKind == "fmdn" && QfFmdn.isValidId(t.tagId))
+
+    /** The identity under which this tag was seen, if any (Find Hub tags: their EID of this moment). */
+    fun matchedIdentity(t: QfDevice, seen: Set<String>, nowSec: Long = System.currentTimeMillis() / 1000): String? =
+        identityOf(t.tagKind, t.tagId)?.takeIf { it in seen }
+            ?: if (t.tagKind == "fmdn") QfFmdn.identitiesNow(t.tagId, nowSec).firstOrNull { it in seen } else null
+
+    fun match(tags: List<QfDevice>, seen: Set<String>, nowSec: Long = System.currentTimeMillis() / 1000): List<QfDevice> =
+        tags.filter { matchedIdentity(it, seen, nowSec) != null }
 
     private fun u16(b: ByteArray, i: Int) = ((b[i].toInt() and 0xff) shl 8) or (b[i + 1].toInt() and 0xff)
 

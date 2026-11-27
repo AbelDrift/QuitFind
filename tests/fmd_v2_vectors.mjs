@@ -113,3 +113,22 @@ console.log('V6  item    =', JSON.stringify({ clientItemIdHex: hex(devId), unixM
 assert.deepEqual(decBlob(kDev, 'device', user, devId, ms, devBlob), devPt);
 assert.throws(() => decBlob(kk.location, 'device', user, devId, ms, devBlob)); // other KEK
 console.log('OK  device register vector');
+
+// ---- 7. Find Hub (FMDN) ephemeral ID, same algorithm as GoogleFindMyTools FMDNCrypto/eid_generator.py ----
+// r' = AES-ECB-256(EIK, FF*11 || K || ts || 00*11 || K || ts), ts = counter with the lowest K=10 bits cleared;
+// r = r' mod n(secp160r1); EID = x(r·G), 20 bytes. Independent of the Kotlin code (OpenSSL vs BouncyCastle).
+const N160 = BigInt('0x0100000000000000000001F4C8F927AED3CA752257');
+function fmdnEid(eik, counter) {
+  const ts = Buffer.alloc(4); ts.writeUInt32BE(counter - (counter % 1024));
+  const block = Buffer.concat([Buffer.alloc(11, 0xff), Buffer.from([10]), ts, Buffer.alloc(11, 0), Buffer.from([10]), ts]);
+  const c = crypto.createCipheriv('aes-256-ecb', eik, null); c.setAutoPadding(false);
+  const r = BigInt('0x' + Buffer.concat([c.update(block), c.final()]).toString('hex')) % N160;
+  const ecdh = crypto.createECDH('secp160r1');
+  ecdh.setPrivateKey(Buffer.from(r.toString(16).padStart(42, '0'), 'hex'));
+  return ecdh.getPublicKey().subarray(1, 21); // 04 || x || y
+}
+const eik = seq(0x00, 32);
+for (const counter of [0, 1024, 1025, 123456789]) console.log(`V7  EID(eik=00..1f, counter=${counter}) =`, hex(fmdnEid(eik, counter)));
+assert.deepEqual(fmdnEid(eik, 1024), fmdnEid(eik, 2047)); // same rotation window
+assert.notDeepEqual(fmdnEid(eik, 1024), fmdnEid(eik, 2048));
+console.log('OK  FMDN EID vectors');

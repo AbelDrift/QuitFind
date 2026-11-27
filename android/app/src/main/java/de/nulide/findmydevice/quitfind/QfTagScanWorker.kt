@@ -44,7 +44,7 @@ class QfTagScanWorker(context: Context, params: WorkerParameters) : CoroutineWor
         val api = QfApi(owner.server)
         val tags = runCatching {
             val o = QfAuth.loginWithPwk(api, owner.username, QfApi.b64d(owner.pwk64))
-            QfRegister.devices(o).filter { it.type == "tag" && QfTagMatcher.identityOf(it.tagKind, it.tagId) != null }
+            QfRegister.devices(o).filter { it.type == "tag" && QfTagMatcher.canMatch(it) }
         }.getOrElse { return@withContext Result.retry() }
         val refused = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val candidates = tags.filter { !refused.getBoolean(key(it), false) }
@@ -57,7 +57,7 @@ class QfTagScanWorker(context: Context, params: WorkerParameters) : CoroutineWor
         val seenBy = (SettingsRepository.getInstance(ctx).get(Settings.SET_FMDSERVER_ID) as? String)?.takeIf { it.isNotBlank() }
         val now = System.currentTimeMillis()
         for (tag in hits) {
-            val rssi = seen[QfTagMatcher.identityOf(tag.tagKind, tag.tagId)]
+            val rssi = QfTagMatcher.matchedIdentity(tag, seen.keys)?.let { seen[it] }
             try {
                 val s = QfAuth.loginWithPwk(api, tag.username, QfApi.b64d(tag.pwk64))
                 val json = QfApi.gson.toJson(buildMap {
@@ -106,6 +106,8 @@ class QfTagScanWorker(context: Context, params: WorkerParameters) : CoroutineWor
     }
 
     private fun filters(tags: List<QfDevice>): List<ScanFilter> = tags.mapNotNull { t ->
+        if (t.tagKind == "fmdn") return@mapNotNull ScanFilter.Builder() // Find Hub frames 0x40/0x41
+            .setServiceData(ParcelUuid.fromString(QfTagMatcher.EDDYSTONE_UUID), byteArrayOf(0x40), byteArrayOf(0xFE.toByte())).build()
         val id = QfTagMatcher.identityOf(t.tagKind, t.tagId) ?: return@mapNotNull null
         when {
             id.startsWith("mac:") -> ScanFilter.Builder().setDeviceAddress(id.removePrefix("mac:")).build()

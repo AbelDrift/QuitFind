@@ -24,7 +24,8 @@ export function isValidTagId(kind: string, id: string): boolean {
       v
     );
   if (kind === 'eddystone') return /^[0-9a-f]{32}$/i.test(v.replace(/[:-]/g, ''));
-  return v.length > 0; // fmdn: via the Google bridge (not matched by phones yet)
+  // fmdn (Google Find Hub): '<EIK as 64 hex>:<pairing time, unix seconds>' – see QfFmdn in the Android app
+  return /^[0-9a-f]{64}:\d{1,11}$/i.test(v);
 }
 
 export interface DeviceEntry {

@@ -22,8 +22,9 @@ class QfTagMatcherTest {
         val ids = QfTagMatcher.identitiesOf(null, null, data)
         Assert.assertEquals(setOf("eddystone:$ns$inst"), ids)
         Assert.assertEquals(1, QfTagMatcher.match(listOf(tag("eddystone", "$ns:$inst")), ids).size)
-        // other Eddystone frames (URL 0x10, TLM 0x20, Find Hub 0x40) are not UIDs
-        Assert.assertTrue(QfTagMatcher.identitiesOf(null, null, byteArrayOf(0x40) + ByteArray(20)).isEmpty())
+        // other Eddystone frames (URL 0x10, TLM 0x20) are not UIDs; Find Hub (0x40) gives an fmdn identity
+        Assert.assertTrue(QfTagMatcher.identitiesOf(null, null, byteArrayOf(0x10) + ByteArray(20)).isEmpty())
+        Assert.assertTrue(QfTagMatcher.identitiesOf(null, null, byteArrayOf(0x40) + ByteArray(20)).none { it.startsWith("eddystone:") })
     }
 
     @Test

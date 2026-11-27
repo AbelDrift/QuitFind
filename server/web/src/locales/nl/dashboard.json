@@ -68,7 +68,7 @@
       "mac": "MAC-adres, bijv. AA:BB:CC:DD:EE:FF",
       "ibeacon": "UUID:major:minor, bijv. f7826da6-4fa2-4e98-8024-bc5b71e0893e:1:12345",
       "eddystone": "namespace + instance (32 hex), bijv. edd1ebeac04e5defa017:0123456789ab",
-      "fmdn": "Find Hub-tag: werkt via de Google-brug"
+      "fmdn": "EIK (64 hex) : koppelmoment (unix-seconden), bijv. uit de Google-brug"
     },
     "tag_id_invalid": "Dit Bluetooth-ID heeft niet de juiste vorm voor deze soort tag."
   },
