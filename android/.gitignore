@@ -71,3 +71,4 @@ app/lint/
 
 # Kotlin
 .kotlin/
+key.properties

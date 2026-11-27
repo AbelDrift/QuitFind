@@ -10,6 +10,13 @@ plugins {
     id 'kotlin-parcelize'
 }
 
+// QuitFind: release-ondertekening uit key.properties (buiten git; maak hem met ./sleutel-maken.sh)
+def qfKeyFile = rootProject.file('key.properties')
+def qfKeys = new Properties()
+if (qfKeyFile.exists()) qfKeyFile.withInputStream { qfKeys.load(it) }
+// QuitFind: standaard serveradres staat niet in de broncode maar komt van ./bouwen.sh (-PquitfindServer=…)
+def qfServer = project.findProperty('quitfindServer') ?: ''
+
 android {
     compileSdk 37
     namespace 'de.nulide.findmydevice'
@@ -45,8 +52,19 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        release {
+            if (qfKeyFile.exists()) {
+                storeFile file(qfKeys['storeFile'])
+                storePassword qfKeys['storePassword']
+                keyAlias qfKeys['keyAlias']
+                keyPassword qfKeys['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (qfKeyFile.exists()) signingConfig signingConfigs.release
             // WARNING: Compile and test the release flavor before publishing!!!
             // This is because minification may strip things that are not explicitly referenced
             // but are actually needed (e.g., objects being serialised by Gson).
@@ -66,7 +84,7 @@ android {
         prod {
             dimension "default"
             buildConfigField "String", "DEFAULT_FMD_COMMAND", "\"fmd\""
-            buildConfigField "String", "DEFAULT_FMD_SERVER_URL", "\"https://server.fmd-foss.org\""
+            buildConfigField "String", "DEFAULT_FMD_SERVER_URL", "\"${qfServer ?: 'https://server.fmd-foss.org'}\""
         }
         edge {
             dimension "default"
