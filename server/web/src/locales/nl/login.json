@@ -23,6 +23,7 @@
     "hint": "Een eigenaar-account toont al je apparaten op één kaart. Het bewaart de sleutels van je apparaten, versleuteld met dit wachtwoord: kies een sterk wachtwoord dat je nergens anders gebruikt.",
     "username_hint": "Letters, cijfers, - en _ (hoogstens 64)",
     "bad_token": "Registratietoken ongeldig",
-    "failed": "Account aanmaken mislukt"
+    "failed": "Account aanmaken mislukt",
+    "bad_name": "Deze naam kan niet: hij is al in gebruik of bevat tekens die niet mogen (alleen letters, cijfers, - en _)."
   }
 }

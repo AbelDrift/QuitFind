@@ -84,9 +84,28 @@ export const DevicesMap = ({ markers, track, selected, onSelect, nameOf }: Devic
     };
   }, []);
 
-  // Markers and track
+  // Markers and track. Only rebuilt when what is drawn really changed (polling every minute would
+  // otherwise close open popups); after a tap on a pin its popup is opened again.
+  const drawnRef = useRef<{ sig: string; t: unknown }>({ sig: '', t: null });
+  const openRef = useRef<string | null>(null);
   useEffect(() => {
     if (!parts) return;
+    const sig = JSON.stringify([
+      markers.map(({ device, loc }) => [
+        device.username,
+        device.name,
+        device.type,
+        loc.lat,
+        loc.lon,
+        loc.date,
+      ]),
+      track.map((loc) => loc.date),
+      selected,
+      units,
+      mapPrimaryColor,
+    ]);
+    if (sig === drawnRef.current.sig && t === drawnRef.current.t) return;
+    drawnRef.current = { sig, t };
     const { L, layer } = parts;
     layer.clearLayers();
 
@@ -143,9 +162,13 @@ export const DevicesMap = ({ markers, track, selected, onSelect, nameOf }: Devic
         zIndexOffset: isSelected ? 1000 : device.type === 'tag' ? -100 : 0,
       })
         .bindPopup(popup(loc, `<strong>${esc(device.name)}</strong><br/>`), POPUP)
-        .on('click', () => onSelect(device.username))
+        .on('click', () => {
+          openRef.current = device.username;
+          onSelect(device.username);
+        })
         .addTo(layer);
       hover(marker);
+      if (openRef.current === device.username) marker.openPopup();
     }
   }, [parts, markers, track, selected, onSelect, nameOf, units, mapPrimaryColor, t]);
 

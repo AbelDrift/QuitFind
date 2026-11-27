@@ -54,11 +54,11 @@ export const LoginForm = () => {
     try {
       await createOwnerAccount(fmdId, password, registrationToken.trim(), rememberMe);
     } catch (error) {
-      if (error instanceof ApiError && error.status == 401) {
-        toast.error(t('register.bad_token'));
-      } else {
-        toast.error(error instanceof Error ? error.message : t('register.failed'));
-      }
+      // translated messages instead of the server's English text
+      const status = error instanceof ApiError ? error.status : 0;
+      if (status === 401) toast.error(t('register.bad_token'));
+      else if (status === 400) toast.error(t('register.bad_name'));
+      else toast.error(t('register.failed') + (status ? ` (${status})` : ''));
     } finally {
       setLoading(false);
     }
@@ -162,7 +162,9 @@ export const LoginForm = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={t('password_placeholder')}
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'} /* geheimen-check: ok */
+              autoComplete={
+                mode === 'login' ? 'current-password' : 'new-password' // geheimen-check: ok
+              }
               required
             />
 

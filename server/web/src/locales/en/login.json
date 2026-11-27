@@ -23,6 +23,7 @@
     "hint": "An owner account shows all your devices on one map. It stores the keys of your devices, encrypted with this password: choose a strong password that you use nowhere else.",
     "username_hint": "Letters, digits, - and _ (at most 64)",
     "bad_token": "Registration token not valid",
-    "failed": "Creating the account failed"
+    "failed": "Creating the account failed",
+    "bad_name": "This name cannot be used: it is taken or contains characters that are not allowed (letters, digits, - and _ only)."
   }
 }
