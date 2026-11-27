@@ -103,3 +103,13 @@ assert.throws(() => decBlob(kk.location, 'location', user, id, ms + 1, blob)); /
 assert.throws(() => decBlob(kk.picture, 'picture', user, id, ms, blob)); // type is bound
 assert.throws(() => decBlob(kk.location, 'location', 'bob', id, ms, blob)); // user is bound
 console.log('OK  round-trip + negative checks');
+
+// ---- 6. QuitFind device register (docs/apparatenregister.md) ----
+const kDev = hkdf(mk, Buffer.concat([utf8('quitfind_v1_kek_device'), sha256(utf8(user))]));
+console.log('V6  K_kek_device =', hex(kDev));
+const devPt = utf8('{"v":1,"kind":"device","username":"qf-phone","server":"","pwk64":"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=","name":"Fairphone","type":"phone","addedAt":1700000000000}');
+const devId = seq(0x30, 16), devBlob = encBlob(kDev, 'device', user, devId, ms, seq(0x40, 32), seq(0xd0, 12), seq(0xe0, 12), devPt);
+console.log('V6  item    =', JSON.stringify({ clientItemIdHex: hex(devId), unixMillis: ms, ciphertext64: b64(devBlob) }));
+assert.deepEqual(decBlob(kDev, 'device', user, devId, ms, devBlob), devPt);
+assert.throws(() => decBlob(kk.location, 'device', user, devId, ms, devBlob)); // other KEK
+console.log('OK  device register vector');
