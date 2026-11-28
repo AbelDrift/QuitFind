@@ -1,0 +1,43 @@
+# QuitFind: alle tests bij elke push (zelfde tests als lokaal, zie README → Tests)
+name: tests
+on: [push, pull_request]
+jobs:
+  crypto:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24' }
+      - run: node tests/fmd_v2_vectors.mjs
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24' }
+      - name: Server-image bouwen (inclusief webpagina)
+        run: docker build -t quitfind-server:dev server
+      - name: Testserver op 127.0.0.1:8096
+        run: |
+          mkdir -p test-instance/db && chmod 777 test-instance/db
+          printf 'DatabaseDir: "/var/lib/fmd-server/db/"\nPortSecure: ""\nPortInsecure: "8080"\nRegistrationToken: "%s"\nMetricsAddrPort: ""\n' "$(openssl rand -hex 16)" > test-instance/config.yml
+          chmod 644 test-instance/config.yml
+          docker run -d --name quitfind-test -p 127.0.0.1:8096:8080 -v "$PWD/test-instance/db:/var/lib/fmd-server/db" -v "$PWD/test-instance/config.yml:/etc/fmd-server/config.yml:ro" quitfind-server:dev
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8096/version && break; sleep 1; done
+      - run: node tests/e2e_register.mjs
+      - run: node tests/bridge_ingest.mjs
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" > /dev/null
+      - run: ./gradlew --no-daemon testDevDebugUnitTest --tests 'de.nulide.findmydevice.quitfind.*'
+        working-directory: android
+  desktop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo test fmd::
+        working-directory: desktop
