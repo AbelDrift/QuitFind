@@ -38,7 +38,9 @@ gevonden als je telefoon (of laptop) in de buurt komt – niet als hij ergens in
 cd server && docker build -t quitfind-server:dev .
 ```
 Een voorbeeld staat in [docs/docker-compose.example.yml](docs/docker-compose.example.yml); de testopzet in `NOTES.md`. De database is dezelfde als die van FMD 0.17.1 (alleen een datatype erbij):
-een bestaande FMD-server kan overstappen, maar **maak eerst een back-up** van de database.
+een bestaande FMD-server stapt over met `tools/server-overzetten.sh`: dat maakt eerst een back-up,
+controleert daarna versie, webpagina en accounts, en zet bij een probleem automatisch terug
+(handmatig terug: `tools/server-overzetten.sh --terug`).
 
 **Webpagina:** open de server in je browser → "Nieuw eigenaar-account" (met de registratiecode van de
 server) → apparaten koppelen (naam + wachtwoord van hun FMD-account) en tags toevoegen.
